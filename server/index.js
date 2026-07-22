@@ -664,6 +664,30 @@ function bufferToGenerativePart(buffer, mimeType) {
   };
 }
 
+// Helper to safely call Gemini with automatic fallback on 503 / 429 / model overload errors
+async function generateContentWithFallback(genAI, promptOrParts, preferredModelName, config = {}) {
+  const modelsToTry = [
+    preferredModelName,
+    'gemini-1.5-flash',
+    'gemini-2.0-flash',
+    'gemini-1.5-pro'
+  ].filter((m, index, self) => m && self.indexOf(m) === index);
+
+  let lastError;
+  for (const modelName of modelsToTry) {
+    try {
+      console.log(`[Gemini] Calling generateContent using model: ${modelName}`);
+      const model = genAI.getGenerativeModel({ model: modelName, ...config });
+      const result = await model.generateContent(promptOrParts);
+      return result;
+    } catch (err) {
+      console.warn(`[Gemini] Model ${modelName} failed (${err.message}). Trying next fallback model...`);
+      lastError = err;
+    }
+  }
+  throw lastError;
+}
+
 app.post('/api/solve', upload.single('image'), async (req, res) => {
   try {
     const apiKey = req.headers['x-api-key'] || process.env.GEMINI_API_KEY;
@@ -704,7 +728,7 @@ app.post('/api/solve', upload.single('image'), async (req, res) => {
       }
     `;
 
-    const ocrResult = await model.generateContent([imagePart, ocrPrompt]);
+    const ocrResult = await generateContentWithFallback(genAI, [imagePart, ocrPrompt], bestModelName, { generationConfig: { responseMimeType: "application/json" } });
     const ocrResponseText = ocrResult.response.text();
     let ocrData;
     try {
@@ -825,7 +849,7 @@ app.post('/api/solve', upload.single('image'), async (req, res) => {
     `;
 
     // Solve call (using original image too to capture visuals)
-    const solveResult = await solverModel.generateContent([imagePart, solverPrompt]);
+    const solveResult = await generateContentWithFallback(genAI, [imagePart, solverPrompt], bestModelNameForSolver, { generationConfig: { responseMimeType: "application/json" } });
     const solveResponseText = solveResult.response.text();
     const cleanSolveResponseText = solveResponseText.replace(/```json/gi, '').replace(/```/g, '').trim();
     let finalOutput;
@@ -910,7 +934,7 @@ app.post('/api/analyze-approach', async (req, res) => {
       }
     `;
 
-    const result = await model.generateContent(prompt);
+    const result = await generateContentWithFallback(genAI, prompt, bestModelName, { generationConfig: { responseMimeType: "application/json" } });
     const responseText = result.response.text();
     const cleanResponseText = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
     let approachGuide;
