@@ -1208,6 +1208,8 @@ app.listen(PORT, '0.0.0.0', () => {
       console.error('[Server] Failed to preload cache:', e.message);
     }
   }
-  // Trigger indexing on start
-  startPdfIndexing();
+  // Trigger background indexing 3 seconds after server is online (zero boot delay)
+  setTimeout(() => {
+    startPdfIndexing();
+  }, 3000);
 });
