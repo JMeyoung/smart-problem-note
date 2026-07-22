@@ -464,30 +464,46 @@ const parseApiResponse = async (response) => {
 };
 
   useEffect(() => {
-    fetch('/api/ai_notes')
-      .then(res => parseApiResponse(res))
-      .then(data => {
-        if (data && Array.isArray(data)) {
+    const loadServerNotes = async () => {
+      try {
+        const [notesRes, aiRes] = await Promise.allSettled([
+          fetch('/api/notes').then(res => parseApiResponse(res)),
+          fetch('/api/ai_notes').then(res => parseApiResponse(res))
+        ]);
+
+        let serverNotes = [];
+        if (notesRes.status === 'fulfilled' && notesRes.value?.notes && Array.isArray(notesRes.value.notes)) {
+          serverNotes = serverNotes.concat(notesRes.value.notes);
+        }
+        if (aiRes.status === 'fulfilled' && Array.isArray(aiRes.value)) {
+          serverNotes = serverNotes.concat(aiRes.value);
+        }
+
+        if (serverNotes.length > 0) {
           setProblems(prev => {
-            const newProblems = [...prev];
-            let changed = false;
-            for (const note of data) {
-              if (!newProblems.find(p => 
-                p.id === note.id || 
-                (note.questionNumber && note.pdfName && p.questionNumber === note.questionNumber && p.pdfName === note.pdfName)
-              )) {
-                newProblems.push(note);
-                changed = true;
+            const combinedMap = new Map();
+            // Load existing local notes
+            prev.forEach(p => {
+              const key = p.id || (p.title + p.question);
+              combinedMap.set(key, p);
+            });
+            // Merge server notes with deduplication
+            serverNotes.forEach(note => {
+              const key = note.id || (note.title + note.question);
+              if (!combinedMap.has(key)) {
+                combinedMap.set(key, note);
               }
-            }
-            if (changed) {
-              localStorage.setItem('smart_problem_note_data', JSON.stringify(newProblems));
-              return newProblems;
-            }
-            return prev;
+            });
+            const deduplicated = Array.from(combinedMap.values());
+            localStorage.setItem('smart_problem_note_data', JSON.stringify(deduplicated));
+            return deduplicated;
           });
         }
-      }).catch(console.error);
+      } catch (err) {
+        console.error('노트 연동 오류:', err);
+      }
+    };
+    loadServerNotes();
   }, []);
 
   useEffect(() => {
