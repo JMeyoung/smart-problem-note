@@ -1,5 +1,22 @@
 import React, { useState, useEffect } from 'react';
 
+const parseApiResponse = async (response) => {
+  const text = await response.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    if (!response.ok) {
+      throw new Error(`서버 연결 지연 (${response.status}): ${text.trim() || '잠시 후 다시 시도해 주세요.'}`);
+    }
+    throw new Error(`서버 응답 규격 오류: ${text.slice(0, 80)}`);
+  }
+  if (!response.ok) {
+    throw new Error(data.error || `서버 처리 오류 (${response.status})`);
+  }
+  return data;
+};
+
 const FolderIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:'8px'}}>
     <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
@@ -163,7 +180,7 @@ export default function Library({ onOpenPdfExternally }) {
         method: 'POST',
         body: formData
       });
-      const data = await res.json();
+      const data = await parseApiResponse(res);
       if (data.success) {
         setUploadProgress('성공! 분석 중...');
         setTimeout(() => {
@@ -225,8 +242,8 @@ export default function Library({ onOpenPdfExternally }) {
         fetch('/api/library'),
         fetch('/api/favorites')
       ]);
-      const libData = await libRes.json();
-      const favData = await favRes.json();
+      const libData = await parseApiResponse(libRes);
+      const favData = await parseApiResponse(favRes);
       
       if (libData.error) throw new Error(libData.error);
       

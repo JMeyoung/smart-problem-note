@@ -428,9 +428,26 @@ function App() {
 
   // --- Effects ---
 
+const parseApiResponse = async (response) => {
+  const text = await response.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    if (!response.ok) {
+      throw new Error(`서버 연결 지연 (${response.status}): ${text.trim() || '잠시 후 다시 시도해 주세요.'}`);
+    }
+    throw new Error(`서버 응답 규격 오류: ${text.slice(0, 80)}`);
+  }
+  if (!response.ok) {
+    throw new Error(data.error || `서버 처리 오류 (${response.status})`);
+  }
+  return data;
+};
+
   useEffect(() => {
     fetch('/api/ai_notes')
-      .then(res => res.json())
+      .then(res => parseApiResponse(res))
       .then(data => {
         if (data && Array.isArray(data)) {
           setProblems(prev => {
@@ -611,12 +628,7 @@ function App() {
         body: JSON.stringify({ question: questionText, subject: subjectText })
       });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || '접근법 분석 과정 중 오류가 발생했습니다.');
-      }
-
-      const result = await res.json();
+      const result = await parseApiResponse(res);
 
       setProblems(prev => prev.map(p => {
         if (p.id === problemId) {
@@ -707,12 +719,7 @@ function App() {
         body: formDataToSend
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'AI 분석 중 오류가 발생했습니다.');
-      }
-
-      const result = await response.json();
+      const result = await parseApiResponse(response);
       
       // Auto fill form data
       const isDefaultSubject = ['수학', '영어'].includes(result.subject);
