@@ -1,0 +1,323 @@
+/* ============================================
+   SMART ODAM NOTE — Premium Liquid Glass UI
+   ============================================ */
+
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+
+/* ── DESIGN TOKENS ── */
+:root {
+  --font-sans: 'Outfit', 'Inter', 'Pretendard', 'Apple SD Gothic Neo', system-ui, sans-serif;
+
+  /* HSL & Hex Sunset Twilight Palette */
+  --accent-primary:   #ff7e67; /* Sunset Coral */
+  --accent-secondary: #c54b8c; /* Sunset Orchid */
+  --accent-success:   #34d399; /* Emerald */
+  --accent-info:      #60a5fa; /* Cyan/Blue Glow */
+  --accent-warning:   #fbbf24; /* Sunset Gold */
+  --accent-danger:    #f87171; /* Soft Coral */
+
+  /* Transitions */
+  --transition-fast:  0.15s cubic-bezier(0.25, 0.8, 0.25, 1);
+  --transition-med:   0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  --transition-spring: 0.55s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Snappy bounce */
+
+  /* Radii */
+  --radius-sm:  10px;
+  --radius-md:  16px;
+  --radius-lg:  24px;
+  --radius-xl:  36px;
+
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── DARK THEME (Sunset Twilight Dark) ── */
+[data-theme="dark"], :root {
+  --bg-primary-gradient: linear-gradient(180deg, #1d1236 0%, #521c3b 50%, #8c3c2a 100%);
+  --bg-base:        #1d1236; 
+  --bg-mesh-a:      rgba(29, 18, 54, 0.3);
+  --bg-mesh-b:      rgba(82, 28, 59, 0.25);
+  --bg-mesh-c:      rgba(140, 60, 42, 0.18);
+
+  --glass-bg:       rgba(255, 255, 255, 0.08);
+  --glass-bg-hover: rgba(255, 255, 255, 0.16);
+  --glass-border:   rgba(255, 255, 255, 0.18);
+  --glass-border-t: rgba(255, 255, 255, 0.3);
+  --glass-shine:    rgba(255, 255, 255, 0.05);
+
+  --panel-bg:       rgba(255, 255, 255, 0.05);
+  --panel-border:   rgba(255, 255, 255, 0.1);
+
+  --text-primary:   #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.85);
+  --text-muted:     rgba(255, 255, 255, 0.55);
+
+  --input-bg:       rgba(0, 0, 0, 0.25);
+  --input-border:   rgba(255, 255, 255, 0.15);
+  --border-color:   rgba(255, 255, 255, 0.12);
+
+  --shadow-sm:  0 4px 12px rgba(30, 10, 40, 0.15);
+  --shadow-md:  0 8px 32px rgba(30, 10, 40, 0.2);
+  --shadow-lg:  0 16px 48px rgba(30, 10, 40, 0.25);
+  --shadow-glow-primary: 0 0 35px rgba(255, 126, 103, 0.2);
+  
+  --convex-shadow: 
+    inset 0 1px 1px rgba(255, 255, 255, 0.2),
+    inset 0 -2px 8px rgba(0, 0, 0, 0.3),
+    0 8px 32px rgba(30, 10, 40, 0.2);
+  --convex-shadow-hover: 
+    inset 0 1px 2px rgba(255, 255, 255, 0.3),
+    inset 0 -2px 8px rgba(0, 0, 0, 0.3),
+    0 16px 48px rgba(30, 10, 40, 0.25),
+    0 0 25px rgba(255, 126, 103, 0.25);
+}
+
+/* ── LIGHT THEME (Mint Glass Light) ── */
+[data-theme="light"] {
+  --bg-primary-gradient: linear-gradient(160deg, #d2ebec 0%, #9fccce 45%, #659799 100%);
+  --bg-base:        #9fccce;
+  --bg-mesh-a:      transparent;
+  --bg-mesh-b:      transparent;
+  --bg-mesh-c:      transparent;
+  --bg-mesh-d:      transparent;
+
+  --glass-bg:       rgba(255, 255, 255, 0.05);
+  --glass-bg-hover: rgba(255, 255, 255, 0.12);
+  --glass-border:   rgba(255, 255, 255, 0.28);
+  --glass-border-t: rgba(255, 255, 255, 0.45);
+  --glass-shine:    rgba(255, 255, 255, 0.15);
+
+  --panel-bg:       rgba(255, 255, 255, 0.05);
+  --panel-border:   rgba(255, 255, 255, 0.2);
+
+  --text-primary:   #1e293b;
+  --text-secondary: rgba(30, 41, 59, 0.85);
+  --text-muted:     rgba(30, 41, 59, 0.60);
+
+  --input-bg:       rgba(255, 255, 255, 0.35);
+  --input-border:   rgba(30, 41, 59, 0.15);
+  --border-color:   rgba(30, 41, 59, 0.1);
+
+  --shadow-sm:  0 4px 12px rgba(30, 41, 59, 0.1);
+  --shadow-md:  0 8px 32px rgba(30, 41, 59, 0.15);
+  --shadow-lg:  0 16px 48px rgba(30, 41, 59, 0.2);
+  --shadow-glow-primary: 0 0 35px rgba(101, 151, 153, 0.25);
+  
+  --convex-shadow: 
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.58),
+    inset 0 -2px 2px rgba(0, 0, 0, 0.17),
+    0 22px 45px rgba(0, 0, 0, 0.29);
+  --convex-shadow-hover: 
+    inset 0 1.5px 1.5px rgba(255, 255, 255, 0.65),
+    inset 0 -2px 2px rgba(0, 0, 0, 0.17),
+    0 28px 55px rgba(0, 0, 0, 0.35),
+    0 0 25px rgba(101, 151, 153, 0.35);
+}
+
+/* ── RESET ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── BODY — ANIMATED MESH GRADIENT BACKGROUND ── */
+body {
+  min-height: 100vh;
+  background: var(--bg-primary-gradient) no-repeat;
+  background-size: cover;
+  background-attachment: fixed;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  transition: background var(--transition-med), color var(--transition-med);
+  overflow-x: hidden;
+  position: relative;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+/* Animated orb layer */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 60% at 12% 45%, var(--bg-mesh-a), transparent),
+    radial-gradient(ellipse 55% 55% at 88% 20%, var(--bg-mesh-b), transparent),
+    radial-gradient(ellipse 45% 50% at 55% 90%, var(--bg-mesh-c), transparent);
+  animation: meshFloat 18s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+[data-theme="light"] body::before {
+  display: none !important;
+}
+
+/* Premium Noise Texture */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 1; /* Above mesh */
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E");
+  opacity: 0.6;
+}
+
+@keyframes meshFloat {
+  0%   { transform: scale(1)    translate(0px,  0px); }
+  50%  { transform: scale(1.06) translate(-15px, 20px); }
+  100% { transform: scale(1.04) translate(12px, -18px); }
+}
+
+/* Ensure app content is above the orb layer and noise */
+#root { position: relative; z-index: 2; }
+
+/* ── PREMIUM GLASS PANEL ── */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.12) !important;
+  backdrop-filter: blur(20px) saturate(190%) brightness(1.05) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(190%) brightness(1.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  border-radius: var(--radius-lg);
+  box-shadow: 
+    inset 0 1px 1px rgba(255, 255, 255, 0.5), 
+    inset 0 -1px 1px rgba(0, 0, 0, 0.05),
+    0 12px 32px rgba(0, 0, 0, 0.1) !important;
+  transition:
+    transform var(--transition-spring),
+    box-shadow var(--transition-spring),
+    background var(--transition-med);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Fresnel Glossy Overlay Layer */
+.glass-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.15), transparent 45%) !important;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.glass-panel:hover {
+  transform: translateY(-4px) scale(1.005);
+  box-shadow: 
+    inset 0 1px 1.5px rgba(255, 255, 255, 0.65), 
+    inset 0 -1px 1px rgba(0, 0, 0, 0.05),
+    0 18px 40px rgba(0, 0, 0, 0.15) !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+}
+
+/* ── TYPOGRAPHY ── */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+/* ── FORM ELEMENTS ── */
+input, select, textarea {
+  width: 100%;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+  outline: none;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.2);
+  background: var(--glass-bg-hover);
+}
+
+/* ── BUTTONS ── */
+button {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform var(--transition-spring), box-shadow var(--transition-spring), background var(--transition-fast), border var(--transition-fast);
+  border: none;
+  outline: none;
+}
+
+button:active { 
+  transform: scale(0.92) translateY(2px) !important; 
+  box-shadow: inset 0 4px 10px rgba(0,0,0,0.2) !important;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.4);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(34, 211, 238, 0.6); }
+
+/* ── UTILITY ANIMATIONS ── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(129,140,248,0.4); }
+  50%       { box-shadow: 0 0 0 8px rgba(129,140,248,0); }
+}
+
+.animate-fade-in  { animation: fadeIn 0.4s var(--transition-med) both; }
+.animate-scale-in { animation: fadeInScale 0.35s var(--transition-med) both; }
+.animate-spin     { animation: spin 1s linear infinite; }
+
+/* ── LAYOUT UTILITIES ── */
+.flex            { display: flex; }
+.flex-col        { display: flex; flex-direction: column; }
+.items-center    { align-items: center; }
+.justify-between { justify-content: space-between; }
+.justify-center  { justify-content: center; }
+.gap-2  { gap: 0.5rem; }
+.gap-4  { gap: 1rem;   }
+.gap-6  { gap: 1.5rem; }
+.mt-4   { margin-top: 1rem; }
+.mb-4   { margin-bottom: 1rem; }
+.p-4    { padding: 1rem; }
+
+/* ── MARK / HIGHLIGHT ── */
+mark {
+  background: rgba(251, 191, 36, 0.3);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+/* Aggressive override to completely hide background blobs in light theme */
+html[data-theme="light"] body::before,
+html[data-theme="light"] ::before,
+[data-theme="light"] body::before {
+  display: none !important;
+  background: none !important;
+  background-image: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
