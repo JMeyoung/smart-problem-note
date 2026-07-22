@@ -4,7 +4,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
-# Cache-bust: 2026-07-23T07:34_fix_502
+# Cache-bust: 2026-07-23T07:37_horizontal_folders
 RUN npm run build
 
 # 2. Setup the Node.js backend

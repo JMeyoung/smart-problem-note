@@ -406,10 +406,12 @@ export default function Library({ onOpenPdfExternally }) {
     }
   };
 
+  const [layoutMode, setLayoutMode] = useState('horizontal'); // 'horizontal' | 'vertical' | 'flat'
+
   return (
     <div 
-      className="library-container flex gap-6" 
-      style={{ height: 'calc(100vh - 90px)', position: 'relative' }}
+      className="library-container flex flex-col gap-4" 
+      style={{ height: 'calc(100vh - 90px)', position: 'relative', overflow: 'hidden' }}
       onDragEnter={handleDrag}
       onDragOver={handleDrag}
     >
@@ -449,53 +451,43 @@ export default function Library({ onOpenPdfExternally }) {
           </div>
         </div>
       )}
-      {/* Sidebar Tree */}
-      <div 
-        className="glass-panel" 
-        style={{ 
-          width: '420px', 
-          minWidth: '380px',
-          padding: '1.2rem 0.8rem 1.2rem 1.2rem', 
-          display: 'flex', 
-          flexDirection: 'column',
-          position: 'relative',
-          boxSizing: 'border-box'
-        }}
-      >
-        <h2 style={{ display: 'flex', alignItems: 'center', margin: '0 0 0.5rem 0', paddingRight: '1rem', fontSize: '1.1rem' }}>
-          <FolderIcon /> 내 드라이브 파일함
-        </h2>
-        <p style={{ fontSize: '0.9rem', color: 'var(--text-muted-dark)', marginBottom: '10px', paddingRight: '1rem' }}>
-          수학, 영어 및 어휘 관련 PDF 파일들을 탐색하세요.
-        </p>
 
-        <div style={{ marginBottom: '1rem', paddingRight: '1rem' }}>
-          <div style={{ marginBottom: '0.75rem' }}>
-            <label 
-              style={{
-                display: 'block',
-                padding: '0.6rem',
-                fontSize: '0.82rem',
-                fontWeight: 'bold',
-                textAlign: 'center',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                color: '#60a5fa',
-                border: '1px dashed rgba(59, 130, 246, 0.3)',
-                borderRadius: 'var(--radius-md)',
-                cursor: uploading ? 'not-allowed' : 'pointer',
-                transition: 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease, border-color 0.2s ease'
-              }}
-            >
-              {uploading ? uploadProgress : '📤 교재/해설 PDF 업로드'}
-              <input 
-                type="file" 
-                accept=".pdf" 
-                disabled={uploading} 
-                onChange={handleUploadFile} 
-                style={{ display: 'none' }} 
-              />
-            </label>
-          </div>
+      {/* Top Header & View Controls */}
+      <div className="glass-panel flex justify-between items-center" style={{ padding: '0.8rem 1.2rem', gap: '1rem', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <h2 style={{ display: 'flex', alignItems: 'center', margin: 0, fontSize: '1.15rem' }}>
+            <FolderIcon /> 내 드라이브 파일함
+          </h2>
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted-dark)', backgroundColor: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.6rem', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+            총 {libraryData.length}개 최상위 폴더
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <label 
+            style={{
+              padding: '0.45rem 0.9rem',
+              fontSize: '0.82rem',
+              fontWeight: 'bold',
+              backgroundColor: 'rgba(59, 130, 246, 0.12)',
+              color: '#60a5fa',
+              border: '1px dashed rgba(59, 130, 246, 0.35)',
+              borderRadius: 'var(--radius-md)',
+              cursor: uploading ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.3rem'
+            }}
+          >
+            {uploading ? uploadProgress : '📤 PDF 업로드'}
+            <input 
+              type="file" 
+              accept=".pdf" 
+              disabled={uploading} 
+              onChange={handleUploadFile} 
+              style={{ display: 'none' }} 
+            />
+          </label>
 
           <input
             type="text"
@@ -503,129 +495,195 @@ export default function Library({ onOpenPdfExternally }) {
             placeholder="🔍 파일명/본문 검색..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-md)', marginBottom: '0.5rem' }}
+            style={{ width: '220px', padding: '0.45rem 0.75rem', fontSize: '0.85rem', borderRadius: 'var(--radius-md)' }}
           />
-          <button 
-            onClick={() => setIsFlatView(!isFlatView)}
-            style={{ 
-              width: '100%', 
-              padding: '0.4rem', 
-              fontSize: '0.8rem', 
-              backgroundColor: isFlatView ? 'rgba(16, 185, 129, 0.1)' : 'var(--bg-tertiary)', 
-              color: isFlatView ? '#34d399' : 'var(--text-primary)',
-              border: `1px solid ${isFlatView ? 'rgba(16, 185, 129, 0.3)' : 'var(--glass-border)'}`,
-              borderRadius: 'var(--radius-sm)',
-              cursor: 'pointer'
-            }}
-          >
-            {isFlatView ? '📂 폴더 구조로 보기' : '📄 모든 파일 한눈에 보기'}
-          </button>
-        </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', paddingRight: '1rem' }}>
-        {loading ? (
-          <p>스캔 중입니다...</p>
-        ) : error ? (
-          <p style={{ color: 'red' }}>{error}</p>
-        ) : searchResults ? (
-          <div className="search-results animate-fade-in">
-            {isSearching && <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>검색 중...</p>}
-            {!isSearching && searchResults.length === 0 && <p style={{ fontSize: '0.85rem' }}>검색 결과가 없습니다.</p>}
-            {searchResults.map((res, i) => (
-              <div 
-                key={i} 
-                onClick={() => setSelectedPdf({ id: res.pdfId, name: res.pdfName })}
-                style={{ 
-                  padding: '10px', 
-                  marginBottom: '8px', 
-                  backgroundColor: 'rgba(255,255,255,0.05)', 
-                  borderRadius: 'var(--radius-sm)', 
-                  cursor: 'pointer',
-                  border: '1px solid var(--glass-border)'
-                }}
-              >
-                <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--accent-primary)', marginBottom: '4px' }}>
-                  📄 {res.pdfName} (p.{res.pageNumber})
-                </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontStyle: 'italic', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                  "{res.snippet}"
-                </div>
-              </div>
-            ))}
+          <div style={{ display: 'flex', backgroundColor: 'rgba(0,0,0,0.2)', padding: '3px', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)' }}>
+            <button 
+              onClick={() => setLayoutMode('horizontal')}
+              title="폴더 가로 나열 뷰"
+              style={{ 
+                padding: '0.35rem 0.7rem', 
+                fontSize: '0.8rem', 
+                fontWeight: layoutMode === 'horizontal' ? 'bold' : 'normal',
+                backgroundColor: layoutMode === 'horizontal' ? 'var(--accent-primary)' : 'transparent', 
+                color: layoutMode === 'horizontal' ? '#fff' : 'var(--text-muted-dark)',
+                border: 'none',
+                borderRadius: 'var(--radius-sm)',
+                cursor: 'pointer'
+              }}
+            >
+              ↔️ 가로 폴더 나열
+            </button>
+            <button 
+              onClick={() => setLayoutMode('vertical')}
+              title="세로 사이드바 트리 뷰"
+              style={{ 
+                padding: '0.35rem 0.7rem', 
+                fontSize: '0.8rem', 
+                fontWeight: layoutMode === 'vertical' ? 'bold' : 'normal',
+                backgroundColor: layoutMode === 'vertical' ? 'var(--accent-primary)' : 'transparent', 
+                color: layoutMode === 'vertical' ? '#fff' : 'var(--text-muted-dark)',
+                border: 'none',
+                borderRadius: 'var(--radius-sm)',
+                cursor: 'pointer'
+              }}
+            >
+              ↕️ 세로 트리
+            </button>
+            <button 
+              onClick={() => setLayoutMode('flat')}
+              title="모든 파일 목록"
+              style={{ 
+                padding: '0.35rem 0.7rem', 
+                fontSize: '0.8rem', 
+                fontWeight: layoutMode === 'flat' ? 'bold' : 'normal',
+                backgroundColor: layoutMode === 'flat' ? 'var(--accent-primary)' : 'transparent', 
+                color: layoutMode === 'flat' ? '#fff' : 'var(--text-muted-dark)',
+                border: 'none',
+                borderRadius: 'var(--radius-sm)',
+                cursor: 'pointer'
+              }}
+            >
+              📄 전체 파일
+            </button>
           </div>
-        ) : (
-          <div className="tree-root">
-            {isFlatView ? (() => {
-              const flatFiles = [];
-              const flatten = (nodes) => {
-                nodes.forEach(n => {
-                  if (n.type === 'file') {
-                    // Avoid duplicates if a file is both in ⭐ 즐겨찾기 and its original folder
-                    if (!flatFiles.find(f => f.id === n.id)) {
-                      flatFiles.push(n);
-                    }
-                  }
-                  if (n.children) flatten(n.children);
-                });
-              };
-              flatten(libraryData);
-              return flatFiles.map((file, idx) => (
-                <TreeNode 
-                  key={idx} 
-                  node={file} 
-                  onFileClick={handleFileClick} 
-                  favorites={favorites} 
-                  onToggleFavorite={handleToggleFavorite} 
-                  onDeleteFile={handleDeleteFile}
-                />
-              ));
-            })() : libraryData.map((rootNode, idx) => (
-              <TreeNode key={idx} node={rootNode} onFileClick={handleFileClick} favorites={favorites} onToggleFavorite={handleToggleFavorite} onDeleteFile={handleDeleteFile} />
-            ))}
-          </div>
-        )}
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="glass-panel flex-col" style={{ flex: 1, padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
-        {selectedPdf ? (
-          <div className="flex-col" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <div className="flex justify-between items-center mb-4">
-              <h3 style={{ margin: 0, wordBreak: 'break-all', fontSize: '1.2rem' }}>📄 {selectedPdf.name}</h3>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button 
-                  onClick={handlePrint} 
-                  disabled={isPrinting}
-                  className="btn btn-secondary">
-                  {isPrinting ? '🖨️ 준비 중...' : '🖨️ 프린트'}
-                </button>
-                <button onClick={openExternal} className="btn btn-secondary">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                    <polyline points="15 3 21 3 21 9"></polyline>
-                    <line x1="10" y1="14" x2="21" y2="3"></line>
-                  </svg>
-                  새 창으로 열기
-                </button>
-              </div>
-            </div>
-            <div style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--panel-border)', position: 'relative', display: 'flex', flexDirection: 'column' }}>
-               <iframe 
-                 id="pdf-preview-frame"
-                 src={selectedPdf.id && !selectedPdf.id.startsWith('local__') ? `https://drive.google.com/file/d/${selectedPdf.id}/preview` : `/api/pdf/${encodeURIComponent(selectedPdf.id || '')}?name=${encodeURIComponent(selectedPdf.name)}`}
-                 title="PDF Preview"
-                 style={{ border: 'none', backgroundColor: '#fff', width: '100%', height: '100%', flex: 1 }}
-                 allow="autoplay"
-               />
+      {/* Main Body Area */}
+      <div style={{ flex: 1, display: 'flex', gap: '1rem', minHeight: 0, overflow: 'hidden' }}>
+        
+        {/* Left Explorer or Horizontal Folder Row */}
+        {layoutMode === 'horizontal' ? (
+          <div style={{ flex: selectedPdf ? '0 0 420px' : '1', display: 'flex', flexDirection: 'column', gap: '0.75rem', overflow: 'hidden' }}>
+            <div 
+              style={{ 
+                flex: 1, 
+                display: 'flex', 
+                flexDirection: 'row', 
+                gap: '1rem', 
+                overflowX: 'auto', 
+                overflowY: 'auto', 
+                paddingBottom: '0.75rem' 
+              }}
+            >
+              {loading ? (
+                <p style={{ padding: '1rem' }}>스캔 중입니다...</p>
+              ) : error ? (
+                <p style={{ color: 'red', padding: '1rem' }}>{error}</p>
+              ) : searchResults ? (
+                <div className="search-results animate-fade-in" style={{ width: '100%', padding: '1rem' }}>
+                  {searchResults.map((res, i) => (
+                    <div key={i} onClick={() => setSelectedPdf({ id: res.pdfId, name: res.pdfName })} style={{ padding: '10px', marginBottom: '8px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', border: '1px solid var(--glass-border)' }}>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--accent-primary)', marginBottom: '4px' }}>📄 {res.pdfName} (p.{res.pageNumber})</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>"{res.snippet}"</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                libraryData.map((rootNode, idx) => (
+                  <div 
+                    key={idx} 
+                    className="glass-panel animate-fade-in" 
+                    style={{ 
+                      width: selectedPdf ? '340px' : '360px', 
+                      minWidth: '300px', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      padding: '1rem', 
+                      boxSizing: 'border-box',
+                      backgroundColor: 'rgba(30, 41, 59, 0.45)',
+                      border: '1px solid var(--glass-border)',
+                      borderRadius: 'var(--radius-md)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.75rem', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.1)', fontWeight: 'bold', fontSize: '1rem', color: '#60a5fa' }}>
+                      {rootNode.name === '⭐ 즐겨찾기' ? <span style={{ marginRight: '6px' }}>⭐</span> : <FolderIcon />}
+                      <span style={{ wordBreak: 'break-word', flex: 1 }}>{rootNode.name}</span>
+                    </div>
+                    <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
+                      <TreeNode 
+                        node={rootNode} 
+                        onFileClick={handleFileClick} 
+                        favorites={favorites} 
+                        onToggleFavorite={handleToggleFavorite} 
+                        onDeleteFile={handleDeleteFile} 
+                      />
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         ) : (
-          <div className="flex-col items-center justify-center" style={{ height: '100%', color: 'var(--text-muted-dark)' }}>
-            <FolderIcon />
-            <p style={{ marginTop: '16px', fontSize: '1.2rem' }}>왼쪽 트리에서 파일을 선택해주세요.</p>
+          <div 
+            className="glass-panel" 
+            style={{ 
+              width: '420px', 
+              minWidth: '360px', 
+              padding: '1rem', 
+              display: 'flex', 
+              flexDirection: 'column', 
+              overflowY: 'auto' 
+            }}
+          >
+            <div className="tree-root">
+              {layoutMode === 'flat' ? (() => {
+                const flatFiles = [];
+                const flatten = (nodes) => {
+                  nodes.forEach(n => {
+                    if (n.type === 'file' && !flatFiles.find(f => f.id === n.id)) flatFiles.push(n);
+                    if (n.children) flatten(n.children);
+                  });
+                };
+                flatten(libraryData);
+                return flatFiles.map((file, idx) => (
+                  <TreeNode key={idx} node={file} onFileClick={handleFileClick} favorites={favorites} onToggleFavorite={handleToggleFavorite} onDeleteFile={handleDeleteFile} />
+                ));
+              })() : libraryData.map((rootNode, idx) => (
+                <TreeNode key={idx} node={rootNode} onFileClick={handleFileClick} favorites={favorites} onToggleFavorite={handleToggleFavorite} onDeleteFile={handleDeleteFile} />
+              ))}
+            </div>
           </div>
         )}
+
+        {/* Right PDF Preview Area */}
+        <div className="glass-panel flex-col" style={{ flex: 1, padding: '1.5rem', display: 'flex', flexDirection: 'column', minWidth: 0, height: '100%' }}>
+          {selectedPdf ? (
+            <div className="flex-col" style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
+              <div className="flex justify-between items-center mb-4">
+                <h3 style={{ margin: 0, wordBreak: 'break-all', fontSize: '1.15rem' }}>📄 {selectedPdf.name}</h3>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button onClick={handlePrint} disabled={isPrinting} className="btn btn-secondary">
+                    {isPrinting ? '🖨️ 준비 중...' : '🖨️ 프린트'}
+                  </button>
+                  <button onClick={openExternal} className="btn btn-secondary">
+                    새 창으로 열기
+                  </button>
+                </div>
+              </div>
+              <div style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--panel-border)', position: 'relative' }}>
+                 <iframe 
+                   id="pdf-preview-frame"
+                   src={selectedPdf.id && !selectedPdf.id.startsWith('local__') ? `https://drive.google.com/file/d/${selectedPdf.id}/preview` : `/api/pdf/${encodeURIComponent(selectedPdf.id || '')}?name=${encodeURIComponent(selectedPdf.name)}`}
+                   title="PDF Preview"
+                   style={{ border: 'none', backgroundColor: '#fff', width: '100%', height: '100%' }}
+                   allow="autoplay"
+                 />
+              </div>
+            </div>
+          ) : (
+            <div className="flex-col items-center justify-center" style={{ height: '100%', color: 'var(--text-muted-dark)', textAlign: 'center', padding: '2rem' }}>
+              <FolderIcon />
+              <h3 style={{ marginTop: '1rem', fontSize: '1.3rem', color: 'var(--text-primary)' }}>가로 폴더함에서 원하시는 교재 PDF를 선택해주세요.</h3>
+              <p style={{ fontSize: '0.95rem', color: 'var(--text-muted-dark)', maxWidth: '500px', margin: '0.5rem auto' }}>
+                상단 버튼을 통해 ↔️ 가로 폴더 나열, ↕️ 세로 트리, 📄 전체 파일 뷰 모드로 자유롭게 전환하실 수 있습니다.
+              </p>
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );
