@@ -72,13 +72,48 @@
   --shadow-glow-primary: 0 0 35px rgba(251, 191, 36, 0.25);
 }
 
-/* 5. Sunset Twilight (Default) */
+/* 5. Sunset Twilight */
 [data-color-theme="sunset"] {
   --bg-primary-gradient: linear-gradient(180deg, #1d1236 0%, #521c3b 50%, #8c3c2a 100%);
   --accent-primary:   #ff7e67; /* Sunset Coral */
   --accent-secondary: #c54b8c; /* Sunset Orchid */
   --accent-info:      #60a5fa;
+  --text-primary:     #ffffff;
+  --text-secondary:   rgba(255, 255, 255, 0.85);
+  --text-muted:       rgba(255, 255, 255, 0.55);
+  --glass-bg:         rgba(255, 255, 255, 0.12);
+  --glass-bg-hover:   rgba(255, 255, 255, 0.18);
+  --glass-border:     rgba(255, 255, 255, 0.25);
+  --glass-border-t:   rgba(255, 255, 255, 0.4);
+  --panel-bg:         rgba(255, 255, 255, 0.05);
+  --panel-border:     rgba(255, 255, 255, 0.1);
+  --input-bg:         rgba(0, 0, 0, 0.25);
+  --input-border:     rgba(255, 255, 255, 0.15);
   --shadow-glow-primary: 0 0 35px rgba(255, 126, 103, 0.25);
+}
+
+/* 6. Pure White Glass (깨끗한 화이트 톤) */
+[data-color-theme="white"], [data-theme="light"] {
+  --bg-primary-gradient: linear-gradient(160deg, #ffffff 0%, #f8fafc 45%, #f1f5f9 100%);
+  --bg-base:          #f8fafc;
+  --accent-primary:   #2563eb; /* Royal Blue */
+  --accent-secondary: #7c3aed; /* Purple Accent */
+  --accent-info:      #0284c7;
+  --text-primary:     #0f172a;
+  --text-secondary:   #334155;
+  --text-muted:       #64748b;
+  --glass-bg:         rgba(255, 255, 255, 0.92);
+  --glass-bg-hover:   rgba(255, 255, 255, 0.98);
+  --glass-border:     rgba(203, 213, 225, 0.7);
+  --glass-border-t:   rgba(255, 255, 255, 1);
+  --panel-bg:         rgba(255, 255, 255, 0.88);
+  --panel-border:     rgba(226, 232, 240, 0.9);
+  --input-bg:         #ffffff;
+  --input-border:     #cbd5e1;
+  --shadow-sm:        0 4px 12px rgba(15, 23, 42, 0.05);
+  --shadow-md:        0 8px 32px rgba(15, 23, 42, 0.08);
+  --shadow-lg:        0 16px 48px rgba(15, 23, 42, 0.12);
+  --shadow-glow-primary: 0 0 35px rgba(37, 99, 235, 0.15);
 }
 
 /* ── RESET ── */
@@ -118,7 +153,7 @@ body::before {
   will-change: transform;
 }
 
-[data-theme="light"] body::before {
+[data-color-theme="white"] body::before, [data-theme="light"] body::before {
   display: none !important;
 }
 
@@ -144,15 +179,15 @@ body::after {
 
 /* ── PREMIUM GLASS PANEL ── */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.12) !important;
+  background: var(--glass-bg, rgba(255, 255, 255, 0.12)) !important;
   backdrop-filter: blur(20px) saturate(190%) brightness(1.05) !important;
   -webkit-backdrop-filter: blur(20px) saturate(190%) brightness(1.05) !important;
-  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.4)) !important;
   border-radius: var(--radius-lg);
   box-shadow: 
-    inset 0 1px 1px rgba(255, 255, 255, 0.5), 
+    inset 0 1px 1px var(--glass-border-t, rgba(255, 255, 255, 0.5)), 
     inset 0 -1px 1px rgba(0, 0, 0, 0.05),
-    0 12px 32px rgba(0, 0, 0, 0.1) !important;
+    var(--shadow-md, 0 12px 32px rgba(0, 0, 0, 0.1)) !important;
   transition:
     transform var(--transition-spring),
     box-shadow var(--transition-spring),
@@ -166,7 +201,7 @@ body::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.15), transparent 45%) !important;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.15), transparent 45%);
   pointer-events: none;
   z-index: 1;
 }
@@ -178,7 +213,7 @@ body::after {
       inset 0 1.5px 1.5px rgba(255, 255, 255, 0.65), 
       inset 0 -1px 1px rgba(0, 0, 0, 0.05),
       0 18px 40px rgba(0, 0, 0, 0.15) !important;
-    background: rgba(255, 255, 255, 0.16) !important;
+    background: var(--glass-bg-hover, rgba(255, 255, 255, 0.16)) !important;
   }
 }
 

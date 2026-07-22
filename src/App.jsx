@@ -388,7 +388,7 @@ function App() {
   });
 
   const [colorTheme, setColorTheme] = useState(() => {
-    return localStorage.getItem('smart_problem_note_color_theme') || 'sunset';
+    return localStorage.getItem('smart_problem_note_color_theme') || 'white';
   });
 
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -1114,6 +1114,7 @@ function App() {
             }}
           >
             {[
+              { id: 'white', emoji: '⚪', label: '퓨어 화이트' },
               { id: 'indigo', emoji: '🌌', label: '딥 스페이스' },
               { id: 'aurora', emoji: '🔮', label: '오로라 핑크' },
               { id: 'sage', emoji: '🌿', label: '세이지 에메랄드' },
