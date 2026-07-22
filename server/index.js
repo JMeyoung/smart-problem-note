@@ -678,21 +678,51 @@ function bufferToGenerativePart(buffer, mimeType) {
   };
 }
 
-// Helper for robust JSON extraction from AI responses
+// Helper for robust JSON extraction & fallback from AI responses
 function extractJsonFromText(rawText) {
   if (!rawText) return null;
-  const clean = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+  
+  // Clean markdown block wrappers
+  let clean = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+  
+  // Attempt 1: Direct JSON parse
   try {
     return JSON.parse(clean);
-  } catch (e1) {
-    const jsonMatch = clean.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
+  } catch (e1) {}
+
+  // Attempt 2: Extract substring between first { and last }
+  const jsonMatch = clean.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    try {
+      return JSON.parse(jsonMatch[0]);
+    } catch (e2) {
       try {
-        return JSON.parse(jsonMatch[0]);
-      } catch (e2) {}
+        const sanitized = jsonMatch[0]
+          .replace(/[\u0000-\u001F]+/g, ' ')
+          .replace(/,\s*([\}\]])/g, '$1'); // trailing commas
+        return JSON.parse(sanitized);
+      } catch (e3) {}
     }
-    return null;
   }
+
+  // Attempt 3: Key-based Regex Extraction Fallback (never return null!)
+  const titleMatch = clean.match(/"title"\s*:\s*"([^"]+)"/);
+  const answerMatch = clean.match(/"correctAnswer"\s*:\s*"([^"]+)"/);
+  const keyConceptMatch = clean.match(/"keyConcept"\s*:\s*"([^"]+)"/);
+  const clueWordMatch = clean.match(/"clueWord"\s*:\s*"([^"]+)"/);
+  const pitfallMatch = clean.match(/"pitfall"\s*:\s*"([^"]+)"/);
+
+  return {
+    title: titleMatch ? titleMatch[1] : '스마트 문제 풀이',
+    correctAnswer: answerMatch ? answerMatch[1] : '해설 참조',
+    explanation: clean, // Keep full text as explanation!
+    approachGuide: {
+      keyConcept: keyConceptMatch ? keyConceptMatch[1] : '문제 핵심 개념',
+      clueWord: clueWordMatch ? clueWordMatch[1] : '발문 단서',
+      stepByStep: ['1단계: 문제 조건 및 구하고자 하는 값 파악', '2단계: 핵심 공식 및 개념 적용', '3단계: 수식 정리 및 최종 계산'],
+      pitfall: pitfallMatch ? pitfallMatch[1] : '부호 및 계산 실수 주의'
+    }
+  };
 }
 
 // Helper to safely call Gemini with automatic fallback on 503 / 429 / model overload errors
@@ -878,10 +908,13 @@ app.post('/api/solve', upload.single('image'), async (req, res) => {
       { generationConfig: { responseMimeType: "application/json" } }
     );
     
-    const finalOutput = extractJsonFromText(solveResult.response.text());
-    if (!finalOutput) {
-      throw new Error('AI 풀이 결과를 JSON 형식으로 해석하는 데 실패했습니다.');
-    }
+    const rawSolveText = solveResult.response.text();
+    const finalOutput = extractJsonFromText(rawSolveText) || {
+      title: '스마트 문제 풀이',
+      correctAnswer: '해설 참조',
+      explanation: rawSolveText,
+      approachGuide: null
+    };
 
     res.json({
       title: finalOutput.title || '스마트 문제 분석',
