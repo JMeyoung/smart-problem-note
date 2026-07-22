@@ -7,7 +7,7 @@ import dotenv from 'dotenv';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { google } from 'googleapis';
 import pdf from 'pdf-parse';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import os from 'os';
 
 dotenv.config();
@@ -445,12 +445,16 @@ app.get('/api/pdf/:fileId', async (req, res) => {
         localPath = foundInUiCache.localPath;
       } else {
         // Last resort fallback (only works for root files)
-        const persistPath = path.join(LOCAL_LIB_PERSIST, relPath);
-        const repoPath = path.join(LOCAL_LIB_REPO, relPath);
-        if (fs.existsSync(persistPath)) localPath = persistPath;
-        else if (fs.existsSync(repoPath)) localPath = repoPath;
+        const persistPath = path.resolve(LOCAL_LIB_PERSIST, relPath);
+        const repoPath = path.resolve(LOCAL_LIB_REPO, relPath);
+        // Protect against path traversal (e.g. local__../../etc/passwd)
+        if (persistPath.startsWith(path.resolve(LOCAL_LIB_PERSIST) + path.sep) && fs.existsSync(persistPath)) {
+          localPath = persistPath;
+        } else if (repoPath.startsWith(path.resolve(LOCAL_LIB_REPO) + path.sep) && fs.existsSync(repoPath)) {
+          localPath = repoPath;
+        }
       }
-      
+
       if (localPath && fs.existsSync(localPath)) {
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', 'inline');
@@ -612,17 +616,22 @@ app.post('/api/open-pdf', (req, res) => {
   }
 
   const platform = os.platform();
-  let cmd = '';
+  let command = '';
+  let args = [];
 
   if (platform === 'darwin') {
-    cmd = `open "${pdfPath}"`;
+    command = 'open';
+    args = [pdfPath];
   } else if (platform === 'win32') {
-    cmd = `start "" "${pdfPath}"`;
+    command = 'cmd.exe';
+    args = ['/c', 'start', '', pdfPath];
   } else {
-    cmd = `xdg-open "${pdfPath}"`;
+    command = 'xdg-open';
+    args = [pdfPath];
   }
 
-  exec(cmd, (error) => {
+  // Use execFile (no shell) so pdfPath can never be interpreted as shell syntax
+  execFile(command, args, (error) => {
     if (error) {
       console.error(`[Exec] Failed to open PDF: ${pdfPath}. Error:`, error);
       return res.status(500).json({ error: 'PDF 파일을 여는 데 실패했습니다.' });
@@ -1161,7 +1170,13 @@ app.post('/api/upload-pdf', upload.single('pdf'), async (req, res) => {
     if (!filename.toLowerCase().endsWith('.pdf')) {
       return res.status(400).json({ error: 'PDF 파일만 업로드할 수 있습니다.' });
     }
-    const targetPath = path.join(LOCAL_LIB_PERSIST, filename);
+
+    // Strip any directory components to prevent path traversal via a crafted filename
+    filename = path.basename(filename);
+    const targetPath = path.resolve(LOCAL_LIB_PERSIST, filename);
+    if (!targetPath.startsWith(path.resolve(LOCAL_LIB_PERSIST) + path.sep)) {
+      return res.status(400).json({ error: '잘못된 파일명입니다.' });
+    }
     fs.writeFileSync(targetPath, req.file.buffer);
     console.log(`[Upload] Saved PDF locally: ${targetPath}`);
     
@@ -1185,10 +1200,10 @@ app.delete('/api/upload-pdf', async (req, res) => {
     
     // Validate that it's actually in LOCAL_LIB_PERSIST
     const relativePath = fileId.replace('local__업로드한 교재/', '');
-    const targetPath = path.join(LOCAL_LIB_PERSIST, relativePath);
-    
+    const targetPath = path.resolve(LOCAL_LIB_PERSIST, relativePath);
+
     // Protect against path traversal
-    if (!targetPath.startsWith(LOCAL_LIB_PERSIST)) {
+    if (!targetPath.startsWith(path.resolve(LOCAL_LIB_PERSIST) + path.sep)) {
       return res.status(400).json({ error: '잘못된 경로입니다.' });
     }
     
