@@ -480,32 +480,33 @@ const parseApiResponse = async (response) => {
         }
 
         if (serverNotes.length > 0) {
-          // Build a dedup key that's stable across sources: local notes use a
-          // numeric Date.now() id, server /api/notes uses Date.now().toString(),
-          // and Drive-sourced ai_notes.json may have its own id scheme entirely.
-          // Stringifying the id (or falling back to title+question) keeps the
-          // same logical note from colliding under two different-typed keys.
           const noteKey = (n) => (n.id !== undefined && n.id !== null)
             ? `id:${String(n.id)}`
             : `tq:${n.title || ''}::${n.question || ''}`;
 
+          const isVersionCurrent = localStorage.getItem('smart_note_data_version') === 'v5_clean_reset';
+
           setProblems(prev => {
             const combinedMap = new Map();
 
-            // Local notes always win: never let a server/seed sync overwrite
-            // or drop something the user already has on this device.
-            prev.forEach(p => combinedMap.set(noteKey(p), p));
-
-            // Server/Drive notes only fill in what's missing locally.
+            // Server notes are authoritative
             serverNotes.forEach(note => {
-              const key = noteKey(note);
-              if (!combinedMap.has(key)) {
-                combinedMap.set(key, note);
-              }
+              combinedMap.set(noteKey(note), note);
             });
+
+            // Only retain local custom notes if client version is up-to-date
+            if (isVersionCurrent) {
+              prev.forEach(p => {
+                const k = noteKey(p);
+                if (!combinedMap.has(k)) {
+                  combinedMap.set(k, p);
+                }
+              });
+            }
 
             const deduplicated = Array.from(combinedMap.values());
             localStorage.setItem('smart_problem_note_data', JSON.stringify(deduplicated));
+            localStorage.setItem('smart_note_data_version', 'v5_clean_reset');
             return deduplicated;
           });
         }
