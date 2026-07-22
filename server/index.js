@@ -19,8 +19,17 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// Multer in-memory storage for uploaded files
-const upload = multer({ storage: multer.memoryStorage() });
+// Multer in-memory storage — max 15 MB per image upload
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('이미지 파일만 업로드 가능합니다.'), false);
+    }
+    cb(null, true);
+  }
+});
 
 
 // Cloud-ready Paths (Railway Volume)
@@ -622,33 +631,36 @@ function searchPdfIndex(queryText) {
   return results.sort((a, b) => b.score - a.score);
 }
 
-const modelCache = new Map();
+const modelCache = new Map(); // key -> { modelName, timestamp }
+const MODEL_CACHE_TTL = 10 * 60 * 1000; // 10 minutes TTL
 
 async function getBestGeminiModel(apiKey) {
-  if (modelCache.has(apiKey)) return modelCache.get(apiKey);
+  const cached = modelCache.get(apiKey);
+  if (cached && (Date.now() - cached.timestamp < MODEL_CACHE_TTL)) {
+    return cached.modelName;
+  }
   try {
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
     if (!res.ok) {
-      console.warn('[Gemini] Failed to list models, defaulting to gemini-1.5-flash');
-      return 'gemini-1.5-flash';
+      console.warn('[Gemini] Failed to list models, defaulting to gemini-2.5-flash');
+      return 'gemini-2.5-flash';
     }
     const data = await res.json();
     const models = data.models || [];
     
     const validModels = models.filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'));
     
-    let bestModel = validModels.find(m => m.name.includes('gemini-3.5-flash')) ||
-                    validModels.find(m => m.name.includes('gemini-3.0-flash')) ||
-                    validModels.find(m => m.name.includes('gemini-2.5-flash')) ||
+    let bestModel = validModels.find(m => m.name.includes('gemini-2.5-flash')) ||
                     validModels.find(m => m.name.includes('gemini-2.0-flash')) ||
                     validModels.find(m => m.name.includes('gemini-1.5-flash')) ||
                     validModels.find(m => m.name.includes('gemini-1.5-pro')) ||
-                    validModels.find(m => m.name.includes('gemini-pro')) ||
+                    validModels.find(m => m.name.includes('gemini-3.5-flash')) ||
+                    validModels.find(m => m.name.includes('gemini-3.0-flash')) ||
                     validModels[validModels.length - 1];
                     
     const modelName = bestModel ? bestModel.name.replace('models/', '') : 'gemini-2.5-flash';
     console.log(`[Gemini] Auto-detected best model: ${modelName}`);
-    modelCache.set(apiKey, modelName);
+    modelCache.set(apiKey, { modelName, timestamp: Date.now() });
     return modelName;
   } catch(e) {
     console.warn('[Gemini] Error listing models:', e.message);
@@ -666,16 +678,33 @@ function bufferToGenerativePart(buffer, mimeType) {
   };
 }
 
+// Helper for robust JSON extraction from AI responses
+function extractJsonFromText(rawText) {
+  if (!rawText) return null;
+  const clean = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+  try {
+    return JSON.parse(clean);
+  } catch (e1) {
+    const jsonMatch = clean.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        return JSON.parse(jsonMatch[0]);
+      } catch (e2) {}
+    }
+    return null;
+  }
+}
+
 // Helper to safely call Gemini with automatic fallback on 503 / 429 / model overload errors
 async function generateContentWithFallback(genAI, promptOrParts, preferredModelName, config = {}) {
   const modelsToTry = [
     preferredModelName,
-    'gemini-3.5-flash',
-    'gemini-3.0-flash',
     'gemini-2.5-flash',
     'gemini-2.0-flash',
     'gemini-1.5-flash',
-    'gemini-1.5-pro'
+    'gemini-1.5-pro',
+    'gemini-3.5-flash',
+    'gemini-3.0-flash'
   ].filter((m, index, self) => m && self.indexOf(m) === index);
 
   let lastError;
@@ -697,7 +726,7 @@ app.post('/api/solve', upload.single('image'), async (req, res) => {
   try {
     const apiKey = req.headers['x-api-key'] || process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(400).json({ error: 'Gemini API Key가 제공되지 않았습니다. 환경변수 설정이나 요청 헤더에 x-api-key를 지정해 주세요.' });
+      return res.status(400).json({ error: 'Gemini API Key가 제공되지 않았습니다. 설정 창에서 입력해주세요.' });
     }
 
     if (!req.file) {
@@ -706,42 +735,48 @@ app.post('/api/solve', upload.single('image'), async (req, res) => {
 
     console.log(`[API-Solve] Processing solve request for file: ${req.file.originalname}`);
 
-    // Initialize Gemini client with provided API Key
     const genAI = new GoogleGenerativeAI(apiKey);
     const bestModelName = await getBestGeminiModel(apiKey);
-    const model = genAI.getGenerativeModel({ 
-      model: bestModelName,
-      generationConfig: { responseMimeType: "application/json" }
-    });
-
     const imagePart = bufferToGenerativePart(req.file.buffer, req.file.mimetype);
 
-    // Call 1: OCR problem text & analyze user handwritten solutions
+    // Call 1: Enhanced OCR problem text & analyze user handwritten solutions
     console.log('[API-Solve] Call 1: Running OCR and Handwriting analysis...');
     const ocrPrompt = `
-      You are an expert OCR AI system. Analyze this image and extract:
-      1. The main question text (problem content) written in the image. Keep formulas or numbers intact.
-      2. Detect if the user wrote their own solution or handwritten scrap note on this image. If yes, transcribe that handwritten solution into "userSolutionText" and set "hasUserSolution" to true. If no user handwriting is found, leave "userSolutionText" empty and "hasUserSolution" to false.
+      You are an expert OCR AI system specialized in Korean exam problems (CSAT/Transfer Math, English, Korean, Science).
+      Analyze this image carefully:
+      1. Extract the main question text ("questionText") completely. Keep mathematical formulas, symbols ($...$ or $$...$$), question numbers (e.g. 15번, [문제 3]), and sub-options (①, ②, ③, ④, ⑤) intact.
+      2. Detect if the user wrote handwritten scrap notes or calculations on this image. If yes, transcribe that handwritten text into "userSolutionText" and set "hasUserSolution" to true. Otherwise set "userSolutionText" to "" and "hasUserSolution" to false.
       3. Classify the subject as one of: "수학", "영어", "국어", "과학", "기타".
 
-      Your output must be a JSON object with this structure:
+      Your output must be a valid JSON object with this exact structure:
       {
-        "questionText": "exact question text parsed...",
+        "questionText": "extracted question text...",
         "hasUserSolution": true/false,
         "userSolutionText": "transcribed user handwriting...",
         "subject": "수학/영어/국어/과학/기타"
       }
     `;
 
-    const ocrResult = await generateContentWithFallback(genAI, [imagePart, ocrPrompt], bestModelName, { generationConfig: { responseMimeType: "application/json" } });
-    const ocrResponseText = ocrResult.response.text();
-    let ocrData;
+    let ocrData = null;
     try {
-      ocrData = JSON.parse(ocrResponseText);
-      console.log('[API-Solve] OCR output parsed successfully:', ocrData.subject);
-    } catch (e) {
-      console.error('[API-Solve] Failed to parse JSON from OCR output:', ocrResponseText);
-      throw new Error('OCR 단계에서 결과 데이터를 해석하지 못했습니다.');
+      const ocrResult = await generateContentWithFallback(
+        genAI, 
+        [imagePart, ocrPrompt], 
+        bestModelName, 
+        { generationConfig: { responseMimeType: "application/json" } }
+      );
+      ocrData = extractJsonFromText(ocrResult.response.text());
+    } catch (ocrErr) {
+      console.warn('[API-Solve] OCR step encountered error, proceeding with fallback:', ocrErr.message);
+    }
+
+    if (!ocrData || !ocrData.questionText) {
+      ocrData = {
+        questionText: '이미지 문제 (인식된 텍스트 자동 추출 실패)',
+        hasUserSolution: false,
+        userSolutionText: '',
+        subject: '수학'
+      };
     }
 
     // Call 2: Match with local PDFs
@@ -772,26 +807,17 @@ app.post('/api/solve', upload.single('image'), async (req, res) => {
         primaryMatch = selectedMatches[0];
         secondaryMatch = selectedMatches[1] || null;
       }
-      console.log(`[API-Solve] Matches selected: Primary=${primaryMatch.pdfName} (${primaryMatch.pageNumber}p), Secondary=${secondaryMatch ? secondaryMatch.pdfName : 'None'}`);
-    } else {
-      console.log('[API-Solve] No PDF matches found.');
+      console.log(`[API-Solve] Matches selected: Primary=${primaryMatch.pdfName} (${primaryMatch.pageNumber}p)`);
     }
 
-    // Call 3: Solve the problem with reference context if available
+    // Call 3: Solve problem with reference context
     console.log('[API-Solve] Call 2: Solving problem via Gemini...');
     
-    // Switch response type to standard JSON configuration
-    const bestModelNameForSolver = await getBestGeminiModel(apiKey);
-    const solverModel = genAI.getGenerativeModel({ 
-      model: bestModelNameForSolver,
-      generationConfig: { responseMimeType: "application/json" }
-    });
-
     let solverPrompt = `
-      당신은 친절하고 뛰어난 전문 강사(멘토)입니다.
-      아래 [문제 내용]을 학생들이 이해하기 쉽게 깊이 있게 풀이해 주세요.
+      당신은 친절하고 실력 있는 입시 전문 멘토 강사입니다.
+      아래 [문제 이미지 및 텍스트]를 분석하여 수험생이 이해하기 쉽게 정답과 단계별 풀이 과정을 작성해 주세요.
 
-      [문제 내용]
+      [문제 텍스트 내용]
       ${ocrData.questionText}
     `;
 
@@ -813,68 +839,58 @@ app.post('/api/solve', upload.single('image'), async (req, res) => {
         """
         `;
       });
-      
-      solverPrompt += `
-      
-      참고: 위 참조 컨텍스트에는 이 문제의 원본 지문 또는 공식 해설지 텍스트가 포함되어 있습니다.
-      특히 '공식 해설/풀이' 참조가 있다면 해당 풀이 로직과 정답을 최우선으로 반영하여 학생에게 설명해 주세요.
-      `;
     }
 
     if (ocrData.hasUserSolution && ocrData.userSolutionText) {
       solverPrompt += `
       
-      [학생이 시도한 풀이]
+      [학생이 시도한 손글씨 풀이]
       """
       ${ocrData.userSolutionText}
       """
-      
-      참고: 학생이 문제 옆에 손글씨로 적은 풀이입니다. 
-      이 풀이 방식이 맞았는지, 틀렸다면 어느 단계에서 어떤 오개념 때문에 오류가 발생했는지 해설 끝부분에 "오답 분석"으로 친절히 짚어주세요.
+      참고: 학생의 풀이가 맞았는지, 오개념이나 계산 실수가 어디서 일어났는지 해설에 친절히 짚어주세요.
       `;
     }
 
     solverPrompt += `
-      반드시 출력은 다음 구조의 JSON 객체여야 합니다:
+      출력은 반드시 다음 구조의 JSON 객체여야 합니다:
       {
-        "title": "개념을 반영한 적절하고 매력적인 문제 제목 (예: 미적분 - 함수의 극한)",
+        "title": "개념을 반영한 매력적인 문제 제목 (예: 미적분 - 함수의 극한)",
         "correctAnswer": "최종 정답 (예: '5' 또는 'x = -2' 등)",
-        "explanation": "Markdown 포맷을 활용한 친절하고 상세한 줄글 해설 및 단계별 풀이 과정. **중요: 모든 수학 수식, 함수, 변수는 반드시 KaTeX 문법을 사용하여 인라인 수식은 $수식$, 블록 수식은 $$수식$$ 형태로 작성하세요.**",
+        "explanation": "Markdown 포맷을 활용한 상세한 단계별 풀이. 모든 수학 수식/변수는 반드시 KaTeX 문법($수식$ 또는 $$수식$$)을 사용하세요.",
         "approachGuide": {
-          "keyConcept": "이 문제를 풀기 위해 머릿속에서 떠올려야 하는 핵심 개념이나 공식 명칭",
-          "clueWord": "문제 본문에서 이 방식을 떠올려야 하는 힌트 문구 또는 조건식 (반드시 단일 문자열 텍스트 하나로만 작성, 쉼표로 분리 금지. 수식이 있다면 $수식$ 형식 사용)",
+          "keyConcept": "핵심 개념이나 공식 명칭",
+          "clueWord": "문제 발문에서 이 방식을 떠올려야 하는 힌트 문구 (단일 문자열)",
           "stepByStep": [
-            "1단계 행동 지침 (무엇으로 식을 시작하는지)",
-            "2단계 행동 지침 (어떻게 전개하거나 적용하는지)",
-            "3단계 행동 지침 (최종 계산을 마무리 짓는 법)"
+            "1단계 행동 지침",
+            "2단계 행동 지침",
+            "3단계 행동 지침"
           ],
-          "pitfall": "학생들이 주로 혼동하는 개념이나 계산 실수 함정 포인트"
+          "pitfall": "학생들이 자주 범하는 오답 함정 및 계산 실수 포인트"
         }
       }
     `;
 
-    // Solve call (using original image too to capture visuals)
-    const solveResult = await generateContentWithFallback(genAI, [imagePart, solverPrompt], bestModelNameForSolver, { generationConfig: { responseMimeType: "application/json" } });
-    const solveResponseText = solveResult.response.text();
-    const cleanSolveResponseText = solveResponseText.replace(/```json/gi, '').replace(/```/g, '').trim();
-    let finalOutput;
+    const solveResult = await generateContentWithFallback(
+      genAI, 
+      [imagePart, solverPrompt], 
+      bestModelName, 
+      { generationConfig: { responseMimeType: "application/json" } }
+    );
     
-    try {
-      finalOutput = JSON.parse(cleanSolveResponseText);
-    } catch (e) {
-      console.error('[API-Solve] Failed to parse Solver output:', solveResponseText);
-      throw new Error('AI 풀이 단계에서 결과 데이터를 해석하지 못했습니다.');
+    const finalOutput = extractJsonFromText(solveResult.response.text());
+    if (!finalOutput) {
+      throw new Error('AI 풀이 결과를 JSON 형식으로 해석하는 데 실패했습니다.');
     }
 
-    // Send final synthesized results
     res.json({
-      title: finalOutput.title,
-      subject: ocrData.subject,
+      title: finalOutput.title || '스마트 문제 분석',
+      subject: ocrData.subject || '수학',
       question: ocrData.questionText,
       mySolution: ocrData.userSolutionText || '',
-      correctAnswer: finalOutput.correctAnswer,
-      explanation: finalOutput.explanation,
-      difficulty: ocrData.subject === '영어' ? 3 : 4, // smart default
+      correctAnswer: finalOutput.correctAnswer || '해설 참조',
+      explanation: finalOutput.explanation || '풀이 생성 완료',
+      difficulty: ocrData.subject === '영어' ? 3 : 4,
       pdfReference: primaryMatch ? {
         pdfId: primaryMatch.pdfId,
         pdfName: primaryMatch.pdfName,
@@ -892,7 +908,7 @@ app.post('/api/solve', upload.single('image'), async (req, res) => {
 
   } catch (err) {
     console.error('[API-Solve] Critical solver error:', err);
-    res.status(500).json({ error: err.message || '서버 내부 오류가 발생했습니다.' });
+    res.status(500).json({ error: err.message || '서버 처리 중 오류가 발생했습니다.' });
   }
 });
 
@@ -913,13 +929,9 @@ app.post('/api/analyze-approach', async (req, res) => {
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const bestModelName = await getBestGeminiModel(apiKey);
-    const model = genAI.getGenerativeModel({ 
-      model: bestModelName,
-      generationConfig: { responseMimeType: "application/json" }
-    });
 
     const prompt = `
-      당신은 수험생을 위한 최고의 입시 멘토입니다.
+      당신은 수험생을 위한 입시 멘토입니다.
       아래 [문제 내용]을 읽고, 이 문제를 풀기 위해 가장 중요한 핵심 개념, 발문 속 결정적인 힌트(단서), 3단계 접근 전략, 그리고 주의해야 할 오답 함정을 정리해 주세요.
       과목 대분류는 '${subject || "기타"}'입니다.
 
@@ -929,26 +941,20 @@ app.post('/api/analyze-approach', async (req, res) => {
       출력은 반드시 다음 구조를 정확히 지키는 JSON이어야 합니다:
       {
         "keyConcept": "핵심 개념이나 이론/공식 명칭",
-        "clueWord": "문제 본문에서 이 방식을 떠올려야 하는 힌트 문구 또는 부호 조건 (반드시 단일 문자열 텍스트 하나로만 작성, 쉼표로 분리 금지)",
+        "clueWord": "문제 본문에서 이 방식을 떠올려야 하는 힌트 문구 또는 부호 조건 (단일 문자열 텍스트 하나로만 작성)",
         "stepByStep": [
-          "1단계 행동 지침 (무엇을 시작하고 어떻게 식을 세우는지)",
-          "2단계 행동 지침 (어떻게 전개하고 어떤 변화식을 쓰는지)",
-          "3단계 행동 지침 (최종 계산 시 정리하는 법)"
+          "1단계 행동 지침",
+          "2단계 행동 지침",
+          "3단계 행동 지침"
         ],
         "pitfall": "시험장에서 수험생들이 흔히 범하는 계산 실수, 착각, 함정 조건"
       }
     `;
 
     const result = await generateContentWithFallback(genAI, prompt, bestModelName, { generationConfig: { responseMimeType: "application/json" } });
-    const responseText = result.response.text();
-    const cleanResponseText = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
-    let approachGuide;
-    try {
-      const parsed = JSON.parse(cleanResponseText);
-      approachGuide = parsed;
-    } catch (e) {
-      console.error('[API-Analyze] Failed to parse JSON from AI analysis:', responseText);
-      throw new Error('AI 분석 결과를 파싱하는 데 실패했습니다.');
+    const approachGuide = extractJsonFromText(result.response.text());
+    if (!approachGuide) {
+      throw new Error('접근법 분석 JSON 해석 실패');
     }
 
     res.json({ approachGuide });
