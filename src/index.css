@@ -92,28 +92,41 @@
   --shadow-glow-primary: 0 0 35px rgba(255, 126, 103, 0.25);
 }
 
-/* 6. Pure White Glass (깨끗한 화이트 톤) */
+/* 6. Pure White Glass (100% 순백색 퓨어 화이트 톤) */
 [data-color-theme="white"], [data-theme="light"] {
-  --bg-primary-gradient: linear-gradient(160deg, #ffffff 0%, #f8fafc 45%, #f1f5f9 100%);
-  --bg-base:          #f8fafc;
+  --bg-primary-gradient: #ffffff;
+  --bg-base:          #ffffff;
   --accent-primary:   #2563eb; /* Royal Blue */
-  --accent-secondary: #7c3aed; /* Purple Accent */
+  --accent-secondary: #4f46e5; /* Indigo */
   --accent-info:      #0284c7;
-  --text-primary:     #0f172a;
-  --text-secondary:   #334155;
-  --text-muted:       #64748b;
-  --glass-bg:         rgba(255, 255, 255, 0.92);
-  --glass-bg-hover:   rgba(255, 255, 255, 0.98);
-  --glass-border:     rgba(203, 213, 225, 0.7);
-  --glass-border-t:   rgba(255, 255, 255, 1);
-  --panel-bg:         rgba(255, 255, 255, 0.88);
+  --text-primary:     #0f172a; /* Slate 900 */
+  --text-secondary:   #334155; /* Slate 700 */
+  --text-muted:       #64748b; /* Slate 500 */
+  --glass-bg:         #ffffff;
+  --glass-bg-hover:   #f8fafc;
+  --glass-border:     rgba(226, 232, 240, 0.9);
+  --glass-border-t:   #ffffff;
+  --panel-bg:         #ffffff;
   --panel-border:     rgba(226, 232, 240, 0.9);
-  --input-bg:         #ffffff;
+  --input-bg:         #f8fafc;
   --input-border:     #cbd5e1;
-  --shadow-sm:        0 4px 12px rgba(15, 23, 42, 0.05);
-  --shadow-md:        0 8px 32px rgba(15, 23, 42, 0.08);
-  --shadow-lg:        0 16px 48px rgba(15, 23, 42, 0.12);
-  --shadow-glow-primary: 0 0 35px rgba(37, 99, 235, 0.15);
+  --shadow-sm:        0 2px 8px rgba(15, 23, 42, 0.04);
+  --shadow-md:        0 8px 24px rgba(15, 23, 42, 0.06);
+  --shadow-lg:        0 16px 36px rgba(15, 23, 42, 0.08);
+  --shadow-glow-primary: 0 0 25px rgba(37, 99, 235, 0.12);
+}
+
+[data-color-theme="white"] body, [data-theme="light"] body {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+
+[data-color-theme="white"] body::before, 
+[data-color-theme="white"] body::after, 
+[data-theme="light"] body::before, 
+[data-theme="light"] body::after {
+  display: none !important;
+  opacity: 0 !important;
 }
 
 /* ── RESET ── */
@@ -153,10 +166,6 @@ body::before {
   will-change: transform;
 }
 
-[data-color-theme="white"] body::before, [data-theme="light"] body::before {
-  display: none !important;
-}
-
 /* Premium Noise Texture */
 body::after {
   content: '';
@@ -194,6 +203,10 @@ body::after {
     background var(--transition-med);
   position: relative;
   overflow: hidden;
+}
+
+[data-color-theme="white"] .glass-panel::before {
+  display: none !important;
 }
 
 /* Fresnel Glossy Overlay Layer */
