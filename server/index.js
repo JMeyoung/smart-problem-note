@@ -315,8 +315,23 @@ async function buildPdfIndex() {
 
         if (buffer) {
           try {
-            const data = await pdf(buffer);
-            const pages = data.text.split('\n\n').map((text, i) => ({
+            // Suppress pdfjs font warning floods during PDF parsing
+            const origWarn = console.warn;
+            console.warn = (...args) => {
+              if (args[0] && typeof args[0] === 'string' && (args[0].includes('font private use area') || args[0].includes('Warning:'))) return;
+              origWarn.apply(console, args);
+            };
+
+            // 3-second timeout per PDF parse to prevent hanging
+            const parsePromise = pdf(buffer);
+            const timeoutPromise = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('PDF parse timeout (3s)')), 3000)
+            );
+            
+            const data = await Promise.race([parsePromise, timeoutPromise]);
+            console.warn = origWarn; // Restore warn
+
+            const pages = (data.text || '').split('\n\n').map((text, i) => ({
               pageNumber: i + 1,
               text: text.trim()
             })).filter(p => p.text.length > 10);
@@ -325,7 +340,7 @@ async function buildPdfIndex() {
               id: fileId,
               name: file.name,
               path: file.path,
-              localPath: file.localPath, // Store for local streaming
+              localPath: file.localPath,
               modifiedAt: file.modifiedAt,
               pages
             };
@@ -335,18 +350,18 @@ async function buildPdfIndex() {
           }
         }
       } else {
-        // Even if cached, the path might have changed (e.g. moved into a subfolder)
         if (cached.path !== file.path) {
           cached.path = file.path;
           hasChanges = true;
         }
-        // Sync localPath in cache if it's a local file and wasn't stored
         if (fileId.startsWith('local__') && !cached.localPath) {
           cached.localPath = file.localPath;
           hasChanges = true;
         }
       }
       indexingStatus.indexedFiles++;
+      // Yield to Node event loop so Express HTTP server remains 100% responsive
+      await new Promise(r => setTimeout(r, 25));
     }
     
     if (hasChanges) {
