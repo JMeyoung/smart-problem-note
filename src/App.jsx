@@ -480,30 +480,32 @@ const parseApiResponse = async (response) => {
         }
 
         if (serverNotes.length > 0) {
-          const isVersionUpdated = localStorage.getItem('smart_note_data_version') === 'v3_direct_n';
+          // Build a dedup key that's stable across sources: local notes use a
+          // numeric Date.now() id, server /api/notes uses Date.now().toString(),
+          // and Drive-sourced ai_notes.json may have its own id scheme entirely.
+          // Stringifying the id (or falling back to title+question) keeps the
+          // same logical note from colliding under two different-typed keys.
+          const noteKey = (n) => (n.id !== undefined && n.id !== null)
+            ? `id:${String(n.id)}`
+            : `tq:${n.title || ''}::${n.question || ''}`;
 
           setProblems(prev => {
             const combinedMap = new Map();
 
-            // Always add server notes first (clean, authoritative, containing Oh Tae-hoon Direct N제 & KeyMath)
-            serverNotes.forEach(note => {
-              const key = note.id || (note.title + note.question);
-              combinedMap.set(key, note);
-            });
+            // Local notes always win: never let a server/seed sync overwrite
+            // or drop something the user already has on this device.
+            prev.forEach(p => combinedMap.set(noteKey(p), p));
 
-            // If client version is up-to-date, keep custom user notes added locally
-            if (isVersionUpdated) {
-              prev.forEach(p => {
-                const key = p.id || (p.title + p.question);
-                if (!combinedMap.has(key)) {
-                  combinedMap.set(key, p);
-                }
-              });
-            }
+            // Server/Drive notes only fill in what's missing locally.
+            serverNotes.forEach(note => {
+              const key = noteKey(note);
+              if (!combinedMap.has(key)) {
+                combinedMap.set(key, note);
+              }
+            });
 
             const deduplicated = Array.from(combinedMap.values());
             localStorage.setItem('smart_problem_note_data', JSON.stringify(deduplicated));
-            localStorage.setItem('smart_note_data_version', 'v3_direct_n');
             return deduplicated;
           });
         }
