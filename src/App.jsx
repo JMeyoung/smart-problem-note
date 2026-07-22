@@ -480,22 +480,30 @@ const parseApiResponse = async (response) => {
         }
 
         if (serverNotes.length > 0) {
+          const isVersionUpdated = localStorage.getItem('smart_note_data_version') === 'v3_direct_n';
+
           setProblems(prev => {
             const combinedMap = new Map();
-            // Load existing local notes
-            prev.forEach(p => {
-              const key = p.id || (p.title + p.question);
-              combinedMap.set(key, p);
-            });
-            // Merge server notes with deduplication
+
+            // Always add server notes first (clean, authoritative, containing Oh Tae-hoon Direct N제 & KeyMath)
             serverNotes.forEach(note => {
               const key = note.id || (note.title + note.question);
-              if (!combinedMap.has(key)) {
-                combinedMap.set(key, note);
-              }
+              combinedMap.set(key, note);
             });
+
+            // If client version is up-to-date, keep custom user notes added locally
+            if (isVersionUpdated) {
+              prev.forEach(p => {
+                const key = p.id || (p.title + p.question);
+                if (!combinedMap.has(key)) {
+                  combinedMap.set(key, p);
+                }
+              });
+            }
+
             const deduplicated = Array.from(combinedMap.values());
             localStorage.setItem('smart_problem_note_data', JSON.stringify(deduplicated));
+            localStorage.setItem('smart_note_data_version', 'v3_direct_n');
             return deduplicated;
           });
         }

@@ -513,16 +513,45 @@ app.get('/api/pdf-by-name/:name', async (req, res) => {
   }
 });
 
-// API: Get all Notes
+// API: Get all Notes with Seed Auto-Sync & Deduplication
 app.get('/api/notes', (req, res) => {
   try {
-    if (!fs.existsSync(NOTES_FILE)) {
-      return res.json({ notes: [] });
+    const repoNotesFile = path.join(process.cwd(), 'data', 'notes.json');
+    let repoNotes = [];
+    if (fs.existsSync(repoNotesFile)) {
+      try {
+        repoNotes = JSON.parse(fs.readFileSync(repoNotesFile, 'utf-8'));
+      } catch (e) {}
     }
-    const data = fs.readFileSync(NOTES_FILE, 'utf-8');
-    res.json({ notes: JSON.parse(data) });
+
+    let volumeNotes = [];
+    if (fs.existsSync(NOTES_FILE)) {
+      try {
+        volumeNotes = JSON.parse(fs.readFileSync(NOTES_FILE, 'utf-8'));
+      } catch (e) {}
+    }
+
+    // Merge and deduplicate by ID or Title
+    const mergedMap = new Map();
+    repoNotes.forEach(n => {
+      if (n && n.title) mergedMap.set(n.id || n.title, n);
+    });
+    volumeNotes.forEach(n => {
+      if (n && n.title && !mergedMap.has(n.id || n.title)) {
+        mergedMap.set(n.id || n.title, n);
+      }
+    });
+
+    const finalNotes = Array.from(mergedMap.values());
+    
+    // Persist clean merged notes to NOTES_FILE
+    try {
+      fs.writeFileSync(NOTES_FILE, JSON.stringify(finalNotes, null, 2), 'utf-8');
+    } catch (e) {}
+
+    res.json({ notes: finalNotes });
   } catch (err) {
-    res.status(500).json({ error: '노트 불러오기 실패' });
+    res.status(500).json({ error: '노트 불러오기 실패: ' + err.message });
   }
 });
 
