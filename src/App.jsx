@@ -387,6 +387,10 @@ function App() {
     return saved || 'dark';
   });
 
+  const [colorTheme, setColorTheme] = useState(() => {
+    return localStorage.getItem('smart_problem_note_color_theme') || 'sunset';
+  });
+
   const [activeTab, setActiveTab] = useState('dashboard');
 
   // Gemini API Key & settings
@@ -459,6 +463,11 @@ function App() {
     localStorage.setItem('smart_problem_note_theme', theme);
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem('smart_problem_note_color_theme', colorTheme);
+    document.documentElement.setAttribute('data-color-theme', colorTheme);
+  }, [colorTheme]);
 
   // Check connection to Node Express server
   useEffect(() => {
@@ -1089,6 +1098,48 @@ function App() {
           <div className={`server-badge ${serverStatus.connected ? 'online' : 'offline'}`} title={serverStatus.connected ? `구글 드라이브 PDF 연동 중 (${serverStatus.pdfCount}개 스캔됨)` : '로컬 백엔드 서버 연결 끊김'}>
             <span className="badge-dot"></span>
             {serverStatus.connected ? `교재/해설 연동 중 (${serverStatus.pdfCount}개)` : '로컬 서버 오프라인'}
+          </div>
+
+          {/* Color Theme Selector Pills */}
+          <div 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '4px', 
+              background: 'rgba(255,255,255,0.08)', 
+              padding: '3px 6px', 
+              borderRadius: 'var(--radius-pill)', 
+              border: '1px solid var(--glass-border)',
+              backdropFilter: 'blur(12px)'
+            }}
+          >
+            {[
+              { id: 'indigo', emoji: '🌌', label: '딥 스페이스' },
+              { id: 'aurora', emoji: '🔮', label: '오로라 핑크' },
+              { id: 'sage', emoji: '🌿', label: '세이지 에메랄드' },
+              { id: 'amber', emoji: '🍯', label: '웜 앰버' },
+              { id: 'sunset', emoji: '🌅', label: '선셋 트와일라잇' },
+            ].map(item => (
+              <button
+                key={item.id}
+                onClick={() => setColorTheme(item.id)}
+                title={`${item.label} 테마 적용`}
+                style={{
+                  background: colorTheme === item.id ? 'var(--accent-primary)' : 'transparent',
+                  color: colorTheme === item.id ? '#ffffff' : 'var(--text-secondary)',
+                  border: 'none',
+                  borderRadius: 'var(--radius-pill)',
+                  padding: '4px 10px',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.18s ease, box-shadow 0.18s ease',
+                  boxShadow: colorTheme === item.id ? '0 2px 10px rgba(0,0,0,0.25)' : 'none'
+                }}
+              >
+                {item.emoji} {item.label}
+              </button>
+            ))}
           </div>
 
           <button 
