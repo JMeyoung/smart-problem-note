@@ -75,7 +75,7 @@
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   box-shadow: var(--shadow-sm);
-  transition: all var(--transition-fast);
+  transition: transform var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .theme-toggle-btn:hover {
@@ -275,7 +275,7 @@
   justify-content: center;
   gap: 0.5rem;
   letter-spacing: 0.01em;
-  transition: all var(--transition-fast);
+  transition: transform var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), opacity var(--transition-fast);
   position: relative;
   overflow: hidden;
 }
@@ -371,7 +371,7 @@
   font-size: 0.95rem;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  transition: all var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
 }
 .search-input:focus {
   border-color: var(--accent-primary);
@@ -418,7 +418,7 @@
   font-size: 0.8rem;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: transform var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
 }
 
 .filter-tag-chip:hover {
@@ -533,7 +533,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all var(--transition-fast);
+  transition: transform var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
 }
 
 .card-action-btn:hover {
@@ -959,7 +959,7 @@ mark {
 /* PDF Open Link Interactive hover */
 .pdf-linked-tag {
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), filter var(--transition-fast);
 }
 
 .pdf-linked-tag:hover {
@@ -1390,7 +1390,7 @@ mark {
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
   margin-top: 0.75rem;
 }
 

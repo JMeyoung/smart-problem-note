@@ -462,7 +462,7 @@ export default function Library({ onOpenPdfExternally }) {
                 border: '1px dashed rgba(59, 130, 246, 0.3)',
                 borderRadius: 'var(--radius-md)',
                 cursor: uploading ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s'
+                transition: 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease, border-color 0.2s ease'
               }}
             >
               {uploading ? uploadProgress : '📤 교재/해설 PDF 업로드'}
