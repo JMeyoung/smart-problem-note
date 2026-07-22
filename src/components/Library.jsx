@@ -62,25 +62,28 @@ const TrashIcon = ({ onClick }) => (
 const TreeNode = ({ node, onFileClick, favorites, onToggleFavorite, onDeleteFile }) => {
   const [isOpen, setIsOpen] = useState(() => {
     return node.name === '⭐ 즐겨찾기' || 
-           node.name.includes('편입 수학') || 
+           node.name.includes('수학') || 
+           node.name.includes('오태훈') || 
+           node.name.includes('장황') || 
+           node.name.includes('Direct') || 
            node.name.includes('교재') ||
            node.name.includes('문법') ||
            node.name.includes('어휘') ||
            node.name.includes('최종본');
   });
 
-  const displayName = node.name.replace(/고득점\s*완성\s*(혼합형\s*)?문제풀이/g, '고완풀');
+  const displayName = node.name; // Keep full, exact original filename without artificial truncation
 
   if (node.type === 'directory') {
     return (
-      <div style={{ marginLeft: '20px', marginTop: '8px' }}>
+      <div style={{ marginLeft: '16px', marginTop: '8px' }}>
         <div 
           onClick={() => setIsOpen(!isOpen)} 
-          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', fontWeight: 'bold', padding: '4px 0', overflow: 'hidden' }}
+          style={{ cursor: 'pointer', display: 'flex', alignItems: 'flex-start', fontWeight: 'bold', padding: '6px 0', gap: '4px' }}
         >
-          <span style={{ display: 'inline-block', width: '16px', marginRight: '4px', flexShrink: 0, transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</span>
-          {node.name === '⭐ 즐겨찾기' ? <span style={{marginRight:'8px', fontSize:'1.1rem', flexShrink: 0}}>⭐</span> : <FolderIcon />}
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }} title={node.name}>{displayName}</span>
+          <span style={{ display: 'inline-block', width: '16px', marginTop: '2px', flexShrink: 0, transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</span>
+          {node.name === '⭐ 즐겨찾기' ? <span style={{marginRight:'6px', fontSize:'1.1rem', flexShrink: 0}}>⭐</span> : <FolderIcon />}
+          <span style={{ wordBreak: 'break-word', whiteSpace: 'normal', lineHeight: '1.35', flex: 1 }} title={node.name}>{displayName}</span>
         </div>
         {isOpen && node.children && (
           <div className="animate-fade-in">
@@ -98,13 +101,13 @@ const TreeNode = ({ node, onFileClick, favorites, onToggleFavorite, onDeleteFile
 
   return (
     <div 
-      style={{ marginLeft: '44px', padding: '6px 0', display: 'flex', alignItems: 'center', cursor: 'pointer', opacity: 0.9, paddingRight: '8px' }}
+      style={{ marginLeft: '32px', padding: '8px 4px', display: 'flex', alignItems: 'flex-start', cursor: 'pointer', opacity: 0.95, gap: '6px' }}
       onClick={() => onFileClick(node)}
       onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
-      onMouseLeave={(e) => e.currentTarget.style.opacity = 0.9}
+      onMouseLeave={(e) => e.currentTarget.style.opacity = 0.95}
     >
       <PdfIcon />
-      <span style={{ fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={node.name}>{displayName}</span>
+      <span style={{ fontSize: '0.92rem', wordBreak: 'break-word', whiteSpace: 'normal', lineHeight: '1.35', flex: 1 }} title={node.name}>{displayName}</span>
       <StarIcon isFavorite={isFavorite} onClick={() => onToggleFavorite(node.id)} />
       {isUploaded && <TrashIcon onClick={() => onDeleteFile(node)} />}
     </div>
@@ -450,8 +453,9 @@ export default function Library({ onOpenPdfExternally }) {
       <div 
         className="glass-panel" 
         style={{ 
-          width: '250px', 
-          padding: '1.2rem 0.5rem 1.2rem 1.2rem', 
+          width: '420px', 
+          minWidth: '380px',
+          padding: '1.2rem 0.8rem 1.2rem 1.2rem', 
           display: 'flex', 
           flexDirection: 'column',
           position: 'relative',
