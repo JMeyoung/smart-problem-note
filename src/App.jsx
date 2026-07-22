@@ -1074,16 +1074,16 @@ const parseApiResponse = async (response) => {
         // Search Filter
         if (searchQuery.trim() !== '') {
           const query = searchQuery.toLowerCase();
-          const matchTitle = p.title.toLowerCase().includes(query);
-          const matchSubject = p.subject.toLowerCase().includes(query);
-          const matchTextbook = p.textbook ? p.textbook.toLowerCase().includes(query) : false;
-          const matchQuestion = p.question.toLowerCase().includes(query);
-          const matchSolution = p.mySolution.toLowerCase().includes(query);
-          const matchAnswer = p.correctAnswer.toLowerCase().includes(query);
-          const matchExplanation = p.explanation.toLowerCase().includes(query);
-          const matchPdf = p.pdfReference?.pdfName.toLowerCase().includes(query) || false;
-          const matchPdfSec = p.pdfReferenceSecondary?.pdfName.toLowerCase().includes(query) || false;
-          
+          const matchTitle = (p.title || '').toLowerCase().includes(query);
+          const matchSubject = (p.subject || '').toLowerCase().includes(query);
+          const matchTextbook = (p.textbook || '').toLowerCase().includes(query);
+          const matchQuestion = (p.question || '').toLowerCase().includes(query);
+          const matchSolution = (p.mySolution || '').toLowerCase().includes(query);
+          const matchAnswer = (p.correctAnswer || '').toLowerCase().includes(query);
+          const matchExplanation = (p.explanation || '').toLowerCase().includes(query);
+          const matchPdf = (p.pdfReference?.pdfName || '').toLowerCase().includes(query);
+          const matchPdfSec = (p.pdfReferenceSecondary?.pdfName || '').toLowerCase().includes(query);
+
           return matchTitle || matchSubject || matchTextbook || matchQuestion || matchSolution || matchAnswer || matchExplanation || matchPdf || matchPdfSec;
         }
         
