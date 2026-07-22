@@ -637,20 +637,22 @@ async function getBestGeminiModel(apiKey) {
     
     const validModels = models.filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'));
     
-    let bestModel = validModels.find(m => m.name.includes('gemini-2.5-flash')) ||
+    let bestModel = validModels.find(m => m.name.includes('gemini-3.5-flash')) ||
+                    validModels.find(m => m.name.includes('gemini-3.0-flash')) ||
+                    validModels.find(m => m.name.includes('gemini-2.5-flash')) ||
                     validModels.find(m => m.name.includes('gemini-2.0-flash')) ||
                     validModels.find(m => m.name.includes('gemini-1.5-flash')) ||
                     validModels.find(m => m.name.includes('gemini-1.5-pro')) ||
                     validModels.find(m => m.name.includes('gemini-pro')) ||
                     validModels[validModels.length - 1];
                     
-    const modelName = bestModel ? bestModel.name.replace('models/', '') : 'gemini-1.5-flash';
+    const modelName = bestModel ? bestModel.name.replace('models/', '') : 'gemini-2.5-flash';
     console.log(`[Gemini] Auto-detected best model: ${modelName}`);
     modelCache.set(apiKey, modelName);
     return modelName;
   } catch(e) {
     console.warn('[Gemini] Error listing models:', e.message);
-    return 'gemini-1.5-flash';
+    return 'gemini-2.5-flash';
   }
 }
 
@@ -668,8 +670,11 @@ function bufferToGenerativePart(buffer, mimeType) {
 async function generateContentWithFallback(genAI, promptOrParts, preferredModelName, config = {}) {
   const modelsToTry = [
     preferredModelName,
-    'gemini-1.5-flash',
+    'gemini-3.5-flash',
+    'gemini-3.0-flash',
+    'gemini-2.5-flash',
     'gemini-2.0-flash',
+    'gemini-1.5-flash',
     'gemini-1.5-pro'
   ].filter((m, index, self) => m && self.indexOf(m) === index);
 
