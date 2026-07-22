@@ -308,17 +308,35 @@ const INITIAL_FORM_STATE = {
   approachGuide: null
 };
 
+// Preprocess LaTeX & special exam symbols to prevent broken characters
+const preprocessLatexText = (str) => {
+  if (!str) return '';
+  let clean = String(str);
+  
+  // Clean replacement characters or broken UTF-8 bytes
+  clean = clean.replace(/[\uFFFD\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
+
+  // Automatically wrap naked LaTeX expressions (like \frac{a}{b}, \lim_{x\to0}, \int, \sqrt) in $...$ if not already wrapped
+  const nakedLatexRegex = /(\\(?:frac|sqrt|lim|int|sum|prod|alpha|beta|gamma|delta|theta|pi|infty|le|ge|neq|approx|times|div|vec|log|ln|sin|cos|tan)\b[^\$\n]*?)(?=(?:[^\$]*\$[^\$]*\$)*[^\$]*$)/gi;
+  clean = clean.replace(nakedLatexRegex, (match) => {
+    return `$${match.trim()}$`;
+  });
+
+  return clean;
+};
+
 // Latex rendering helper component
 const LatexText = ({ text, highlight = '' }) => {
   if (!text) return null;
-  
+  const processedText = preprocessLatexText(text);
+
   if (!window.katex) {
-    return <span>{text}</span>;
+    return <span>{processedText}</span>;
   }
 
   // Split text by LaTeX blocks: $$...$$ (display math) and $...$ (inline math)
   const regex = /(\$\$[\s\S]+?\$\$|\$[\s\S]+?\$)/g;
-  const splitParts = text.split(regex);
+  const splitParts = processedText.split(regex);
 
   // Search term highlight helper
   const highlightHelper = (plainText) => {
@@ -336,21 +354,19 @@ const LatexText = ({ text, highlight = '' }) => {
     <span>
       {splitParts.map((part, index) => {
         if (part.startsWith('$$') && part.endsWith('$$')) {
-          const math = part.slice(2, -2);
+          const math = part.slice(2, -2).trim();
           try {
             const html = window.katex.renderToString(math, { displayMode: true, throwOnError: false });
             return <div key={index} dangerouslySetInnerHTML={{ __html: html }} className="katex-display" />;
           } catch (e) {
-            console.error('KaTeX display error:', e);
             return <code key={index}>{part}</code>;
           }
         } else if (part.startsWith('$') && part.endsWith('$')) {
-          const math = part.slice(1, -1);
+          const math = part.slice(1, -1).trim();
           try {
             const html = window.katex.renderToString(math, { displayMode: false, throwOnError: false });
             return <span key={index} dangerouslySetInnerHTML={{ __html: html }} className="katex-inline" />;
           } catch (e) {
-            console.error('KaTeX inline error:', e);
             return <code key={index}>{part}</code>;
           }
         } else {
@@ -701,52 +717,59 @@ const parseApiResponse = async (response) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setAiLoading(true);
-    setErrorMsg('');
-    setAiStatus('이미지 업로드 중...');
-
-    const formDataToSend = new FormData();
-    formDataToSend.append('image', file);
-
-    try {
-      setAiStatus('AI 분석 및 PDF(문제집/해설지) 매칭 중 (약 5~15초 소요)...');
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const dataUrl = event.target.result;
       
-      const response = await fetch('/api/solve', {
-        method: 'POST',
-        headers: {
-          'x-api-key': apiKey
-        },
-        body: formDataToSend
-      });
+      setAiLoading(true);
+      setErrorMsg('');
+      setAiStatus('이미지 업로드 준비 중...');
 
-      const result = await parseApiResponse(response);
-      
-      // Auto fill form data
-      const isDefaultSubject = ['수학', '영어'].includes(result.subject);
-      setFormData({
-        title: result.title || '',
-        subject: isDefaultSubject ? result.subject : '직접 입력',
-        customSubject: isDefaultSubject ? '' : result.subject,
-        question: result.question || '',
-        mySolution: result.mySolution || '',
-        correctAnswer: result.correctAnswer || '',
-        explanation: result.explanation || '',
-        difficulty: result.difficulty || 3,
-        pdfReference: result.pdfReference || null,
-        pdfReferenceSecondary: result.pdfReferenceSecondary || null,
-        approachGuide: result.approachGuide || null
-      });
+      const formDataToSend = new FormData();
+      formDataToSend.append('image', file);
 
-      setAiStatus('');
-      window.scrollTo({ top: 180, behavior: 'smooth' });
+      try {
+        setAiStatus('AI 이미지 분석 및 교재/해설지 매칭 중 (약 5~12초 소요)...');
+        
+        const response = await fetch('/api/solve', {
+          method: 'POST',
+          headers: {
+            'x-api-key': apiKey
+          },
+          body: formDataToSend
+        });
 
-    } catch (err) {
-      console.error(err);
-      setErrorMsg(err.message || '서버와의 통신이 실패했습니다. 백엔드 서버가 실행 중인지 확인하세요.');
-    } finally {
-      setAiLoading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
+        const result = await parseApiResponse(response);
+        
+        // Auto fill form data
+        const isDefaultSubject = ['수학', '영어'].includes(result.subject);
+        setFormData({
+          title: result.title || '',
+          subject: isDefaultSubject ? result.subject : '직접 입력',
+          customSubject: isDefaultSubject ? '' : result.subject,
+          question: result.question || '',
+          imageUrl: dataUrl, // Keep exact original image!
+          mySolution: result.mySolution || '',
+          correctAnswer: result.correctAnswer || '',
+          explanation: result.explanation || '',
+          difficulty: result.difficulty || 3,
+          pdfReference: result.pdfReference || null,
+          pdfReferenceSecondary: result.pdfReferenceSecondary || null,
+          approachGuide: result.approachGuide || null
+        });
+
+        setAiStatus('');
+        window.scrollTo({ top: 180, behavior: 'smooth' });
+
+      } catch (err) {
+        console.error(err);
+        setErrorMsg(err.message || '서버와의 통신이 실패했습니다.');
+      } finally {
+        setAiLoading(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   // --- Accordion Controls ---
@@ -1688,11 +1711,20 @@ const parseApiResponse = async (response) => {
                             <div className="section-text">
                               <LatexText text={problem.question} highlight={searchQuery} />
                               {problem.imageUrl && (
-                                <img 
-                                  src={problem.imageUrl} 
-                                  alt="문제 이미지" 
-                                  style={{ maxWidth: '100%', marginTop: '1rem', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} 
-                                />
+                                <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px dashed var(--glass-border)' }}>
+                                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                    <span>📸</span> 실제 시험지 원본 이미지 (기호/그림 100% 보존)
+                                  </div>
+                                  <div style={{ background: '#ffffff', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+                                    <img 
+                                      src={problem.imageUrl} 
+                                      alt="실제 시험지 문제 양식 이미지" 
+                                      style={{ maxWidth: '100%', display: 'block', borderRadius: 'var(--radius-sm)', cursor: 'zoom-in' }} 
+                                      onClick={() => window.open(problem.imageUrl, '_blank')}
+                                      title="클릭하여 새 탭에서 원본 해상도로 확대 보기"
+                                    />
+                                  </div>
+                                </div>
                               )}
                             </div>
                           </div>
