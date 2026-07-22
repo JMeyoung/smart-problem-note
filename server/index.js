@@ -862,7 +862,7 @@ app.post('/api/solve', upload.single('image'), async (req, res) => {
       };
     }
 
-    // Call 2: Match with local PDFs
+    // Call 2: Match with local PDFs & Auto-pair with official Solution PDFs
     console.log('[API-Solve] Searching local PDF index for matches...');
     const matches = searchPdfIndex(ocrData.questionText);
     
@@ -877,6 +877,40 @@ app.post('/api/solve', upload.single('image'), async (req, res) => {
       if (selectedMatches.length >= 2) break;
     }
     
+    // Auto-search for corresponding official solution PDF if a question PDF was matched
+    for (const match of [...selectedMatches]) {
+      const isSol = /해설|풀이|해답|답안|solution|answer|key/i.test(match.pdfName);
+      if (!isSol) {
+        // Try finding matching solution PDF file in index
+        const baseName = match.pdfName.replace(/\.pdf$/i, '').trim();
+        for (const fileId in pdfPageIndex) {
+          const cachedItem = pdfPageIndex[fileId];
+          const cachedName = (cachedItem.name || '').normalize('NFC');
+          const isTargetSol = /해설|풀이|해답|답안/i.test(cachedName);
+          
+          if (isTargetSol && (cachedName.includes(baseName) || baseName.includes(cachedName.replace(/해설|풀이|해답|답안|\.pdf/gi, '').trim()))) {
+            if (!seenFiles.has(cachedItem.path)) {
+              seenFiles.add(cachedItem.path);
+              // Find best matching page in solution PDF or take matching page
+              const solPage = cachedItem.pages.find(p => p.pageNumber === match.pageNumber) || cachedItem.pages[0];
+              if (solPage) {
+                selectedMatches.push({
+                  pdfId: cachedItem.id,
+                  pdfName: cachedItem.name,
+                  pdfPath: cachedItem.path,
+                  pageNumber: solPage.pageNumber,
+                  text: solPage.text,
+                  score: match.score || 10
+                });
+                console.log(`[API-Solve] Auto-attached paired official solution PDF: ${cachedItem.name} (p.${solPage.pageNumber})`);
+              }
+            }
+            break;
+          }
+        }
+      }
+    }
+
     // Determine primary match (prefer solution file)
     let primaryMatch = null;
     let secondaryMatch = null;
@@ -899,17 +933,21 @@ app.post('/api/solve', upload.single('image'), async (req, res) => {
     let solverPrompt = `
       당신은 친절하고 실력 있는 입시 전문 멘토 강사입니다.
       아래 [문제 이미지 및 텍스트]를 분석하여 수험생이 이해하기 쉽게 정답과 단계별 풀이 과정을 작성해 주세요.
+      
+      ⚠️ [오태훈 교수님 교재 및 공식 해설지 참조 필수 규칙]
+      - 문제와 함께 첨부된 공식 해설지(해설.pdf / 해설지.pdf)가 있는 경우, **해당 해설지의 정답 및 단계별 풀이 과정을 반드시 최우선으로 반영**하여 해설(explanation)을 작성해야 합니다.
+      - 해설지 고유의 풀이 노하우와 접근법을 적극 참고하여 학생이 이해하기 쉽도록 Markdown 포맷으로 상세하게 기술해주세요.
 
       [문제 텍스트 내용]
       ${ocrData.questionText}
     `;
 
     if (selectedMatches.length > 0) {
-      solverPrompt += `\n\n[구글 드라이브 교재/해설지 참조 컨텍스트]`;
+      solverPrompt += `\n\n[구글 드라이브 교재/공식 해설지 참조 컨텍스트]`;
       
       selectedMatches.forEach((match, idx) => {
         const isSolutionFile = /해설|풀이|해답|답안|solution|answer|key/i.test(match.pdfName);
-        const fileTypeLabel = isSolutionFile ? "공식 해설/풀이" : "교재 문제 지문";
+        const fileTypeLabel = isSolutionFile ? "⭐ 공식 첨부 해설지" : "교재 문제 지문";
         
         solverPrompt += `
         
