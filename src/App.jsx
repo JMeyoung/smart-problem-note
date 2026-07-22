@@ -298,7 +298,9 @@ const INITIAL_FORM_STATE = {
   subject: '수학',
   subSubject: '미적분과 급수',
   customSubject: '',
+  textbook: '자체 오답노트',
   question: '',
+  imageUrl: '',
   mySolution: '',
   correctAnswer: '',
   explanation: '',
@@ -997,6 +999,32 @@ const parseApiResponse = async (response) => {
     setFormData(INITIAL_FORM_STATE);
   };
 
+  const [selectedTextbook, setSelectedTextbook] = useState('전체');
+
+  const allTextbooks = useMemo(() => {
+    const set = new Set();
+    problems.forEach(p => {
+      const tb = (p.textbook || '자체 오답노트').trim();
+      if (tb) set.add(tb);
+    });
+    return Array.from(set);
+  }, [problems]);
+
+  // --- Select All Filtered Problems Handler ---
+  const handleSelectAllFiltered = () => {
+    const filteredIds = filteredProblems.map(p => p.id);
+    setSelectedForPrint(prev => {
+      const next = new Set(prev);
+      const allSelected = filteredIds.every(id => next.has(id));
+      if (allSelected) {
+        filteredIds.forEach(id => next.delete(id));
+      } else {
+        filteredIds.forEach(id => next.add(id));
+      }
+      return next;
+    });
+  };
+
   // --- Filtering & Sorting ---
   const filteredProblems = useMemo(() => {
     return problems
@@ -1008,9 +1036,15 @@ const parseApiResponse = async (response) => {
           return isDue && !isMastered;
         }
 
-        // Tag Filter
+        // Subject Tag Filter
         if (selectedTag !== '전체' && p.subject !== selectedTag) {
           return false;
+        }
+
+        // Textbook Filter
+        if (selectedTextbook !== '전체') {
+          const pTextbook = (p.textbook || '자체 오답노트').trim();
+          if (pTextbook !== selectedTextbook) return false;
         }
         
         // Search Filter
@@ -1018,6 +1052,7 @@ const parseApiResponse = async (response) => {
           const query = searchQuery.toLowerCase();
           const matchTitle = p.title.toLowerCase().includes(query);
           const matchSubject = p.subject.toLowerCase().includes(query);
+          const matchTextbook = p.textbook ? p.textbook.toLowerCase().includes(query) : false;
           const matchQuestion = p.question.toLowerCase().includes(query);
           const matchSolution = p.mySolution.toLowerCase().includes(query);
           const matchAnswer = p.correctAnswer.toLowerCase().includes(query);
@@ -1025,7 +1060,7 @@ const parseApiResponse = async (response) => {
           const matchPdf = p.pdfReference?.pdfName.toLowerCase().includes(query) || false;
           const matchPdfSec = p.pdfReferenceSecondary?.pdfName.toLowerCase().includes(query) || false;
           
-          return matchTitle || matchSubject || matchQuestion || matchSolution || matchAnswer || matchExplanation || matchPdf || matchPdfSec;
+          return matchTitle || matchSubject || matchTextbook || matchQuestion || matchSolution || matchAnswer || matchExplanation || matchPdf || matchPdfSec;
         }
         
         return true;
@@ -1040,7 +1075,7 @@ const parseApiResponse = async (response) => {
         }
         return 0;
       });
-  }, [problems, searchQuery, selectedTag, sortBy]);
+  }, [problems, searchQuery, selectedTag, selectedTextbook, sortBy]);
 
   // Format date helper
   const formatDate = (isoString) => {
@@ -1416,7 +1451,20 @@ const parseApiResponse = async (response) => {
             )}
 
             <div className="form-group">
-              <label htmlFor="title">문제 제목 (선택)</label>
+              <label htmlFor="textbook">교재 / 출처 분류 <span style={{ fontSize: '0.8rem', opacity: 0.6, fontWeight: 400 }}>(선택)</span></label>
+              <input 
+                type="text" 
+                id="textbook" 
+                name="textbook" 
+                placeholder="예: 2025 편입수학 기출, 마더텅..." 
+                value={formData.textbook || ''}
+                onChange={handleInputChange}
+                maxLength={40}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="title">문제 제목 <span style={{ fontSize: '0.8rem', opacity: 0.6, fontWeight: 400 }}>(선택)</span></label>
               <input 
                 type="text" 
                 id="title" 
@@ -1441,14 +1489,13 @@ const parseApiResponse = async (response) => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="mySolution">내 풀이</label>
+              <label htmlFor="mySolution">내 풀이 <span style={{ fontSize: '0.8rem', opacity: 0.6, fontWeight: 400 }}>(선택 사항 - 미입력 가능)</span></label>
               <textarea 
                 id="mySolution" 
                 name="mySolution" 
-                placeholder="자신이 풀었던 방식을 적어보세요..." 
+                placeholder="자신이 풀었던 방식을 적어보세요... (선택 사항)" 
                 value={formData.mySolution}
                 onChange={handleInputChange}
-                required
               />
             </div>
 
@@ -1494,13 +1541,19 @@ const parseApiResponse = async (response) => {
 
         {/* RIGHT COLUMN: SEARCH & LIST PANEL */}
         <main className="list-panel">
+
+          {/* PRINT ONLY WORKBOOK HEADER */}
+          <div className="print-only-header">
+            <h2>📄 스마트 오답노트 - 선택 문항 모음집 (PDF)</h2>
+            <p>생성일시: {new Date().toLocaleDateString('ko-KR')} | 선택된 문제 수: {selectedForPrint.size || filteredProblems.length}개</p>
+          </div>
           
           {/* PRINT & BULK ACTIONS CONTROL BLOCK */}
           {selectedForPrint.size > 0 && (
             <div className="print-actions-card glass-panel animate-fade-in" style={{ borderColor: 'var(--accent-secondary)' }}>
               <span>🛠️ 선택된 문항: <strong>{selectedForPrint.size}</strong>개</span>
               <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button className="btn btn-primary" onClick={handlePrintExam}>시험지 인쇄 (PDF)</button>
+                <button className="btn btn-primary" onClick={handlePrintExam}>📄 선택 문항 통합 PDF 다운로드</button>
                 <button className="btn btn-danger" onClick={handleBulkDelete}>선택 일괄 삭제</button>
                 <button className="btn btn-secondary" onClick={clearPrintSelection}>선택 해제</button>
               </div>
@@ -1514,7 +1567,7 @@ const parseApiResponse = async (response) => {
               <input 
                 type="text" 
                 className="search-input" 
-                placeholder="제목, 문제 내용, 해설, 연동 PDF 키워드로 검색..." 
+                placeholder="제목, 교재명, 문제 내용, 해설, 연동 PDF 키워드로 검색..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -1530,6 +1583,26 @@ const parseApiResponse = async (response) => {
                 <option value="oldest">오래된 등록순</option>
                 <option value="difficulty">난이도 높은순</option>
               </select>
+
+              <select 
+                className="filter-select"
+                value={selectedTextbook}
+                onChange={(e) => setSelectedTextbook(e.target.value)}
+              >
+                <option value="전체">📚 모든 교재 분류 ({problems.length})</option>
+                {allTextbooks.map(tb => (
+                  <option key={tb} value={tb}>📚 {tb} ({problems.filter(p => (p.textbook || '자체 오답노트') === tb).length})</option>
+                ))}
+              </select>
+
+              <button 
+                type="button" 
+                className="btn btn-secondary" 
+                style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem', borderRadius: 'var(--radius-md)' }}
+                onClick={handleSelectAllFiltered}
+              >
+                {filteredProblems.every(p => selectedForPrint.has(p.id)) && filteredProblems.length > 0 ? '☑️ 선택 해제' : '☑️ 현재 화면 문항 전체 선택'}
+              </button>
 
               <div className="filter-tags-list">
                 <button 
@@ -1600,6 +1673,9 @@ const parseApiResponse = async (response) => {
                         <div>
                           <div className="card-meta">
                             <span className="subject-badge">{problem.subject}{problem.subSubject ? ` > ${problem.subSubject}` : ''}</span>
+                            <span className="subject-badge" style={{ background: 'rgba(99, 102, 241, 0.12)', color: 'var(--accent-primary)', borderColor: 'rgba(99, 102, 241, 0.3)' }}>
+                              📚 {problem.textbook || '자체 오답노트'}
+                            </span>
                             <span className="card-date">{formatDate(problem.createdAt)}</span>
                             <div className="difficulty-stars" title={`난이도: ${problem.difficulty}`}>
                               {[1, 2, 3, 4, 5].map(star => (
@@ -1799,15 +1875,17 @@ const parseApiResponse = async (response) => {
                         {/* Printable working space */}
                         <div className="print-workspace"></div>
 
-                        {/* 2. My Solution Section */}
-                        <div className="section-box">
-                          <div className="section-label label-my-sol">
-                            <span>✏️</span> 내 풀이
+                        {/* 2. My Solution Section (Optional) */}
+                        {problem.mySolution && problem.mySolution.trim() !== '' && (
+                          <div className="section-box">
+                            <div className="section-label label-my-sol">
+                              <span>✏️</span> 내 풀이
+                            </div>
+                            <div className="section-text">
+                              <LatexText text={problem.mySolution} highlight={searchQuery} />
+                            </div>
                           </div>
-                          <div className="section-text">
-                            <LatexText text={problem.mySolution} highlight={searchQuery} />
-                          </div>
-                        </div>
+                        )}
 
                         {/* Spaced repetition footer & practice test trigger */}
                         {!isTesting && (

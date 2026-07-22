@@ -345,3 +345,93 @@ html[data-theme="light"] ::before,
   opacity: 0 !important;
   visibility: hidden !important;
 }
+
+/* --- PRINT STYLES FOR PDF WORKBOOK EXPORT --- */
+.print-only-header {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 15mm 10mm 15mm 15mm; /* Hardware margin rule compliant */
+  }
+
+  body, #root {
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+
+  /* Hide UI elements during print */
+  header, 
+  aside, 
+  .search-filter-card, 
+  .print-actions-card, 
+  .btn, 
+  .theme-selector,
+  .no-print,
+  .accordion-icon,
+  .pdf-reference-badge button {
+    display: none !important;
+  }
+
+  .print-only-header {
+    display: block !important;
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #111827;
+  }
+  .print-only-header h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+  .print-only-header p {
+    font-size: 0.85rem;
+    color: #4b5563;
+  }
+
+  .main-layout {
+    display: block !important;
+  }
+  
+  .list-panel {
+    width: 100% !important;
+  }
+
+  .problem-card {
+    background: #ffffff !important;
+    color: #111827 !important;
+    border: 1px solid #e5e7eb !important;
+    box-shadow: none !important;
+    margin-bottom: 2rem !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    border-radius: 8px !important;
+  }
+
+  .card-body {
+    display: block !important;
+    padding: 1rem !important;
+  }
+
+  .section-box {
+    background: #f9fafb !important;
+    border: 1px solid #e5e7eb !important;
+    color: #111827 !important;
+    box-shadow: none !important;
+  }
+
+  .approach-table {
+    border-color: #e5e7eb !important;
+  }
+  .approach-table th, .approach-table td {
+    border-color: #e5e7eb !important;
+    color: #111827 !important;
+  }
+
+  img {
+    max-width: 100% !important;
+    page-break-inside: avoid !important;
+  }
+}
