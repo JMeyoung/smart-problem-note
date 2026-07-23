@@ -98,6 +98,10 @@
   height: calc(100vh - 200px);
 }
 
+/* Draggable tab switcher labels: short variant only shown on mobile (see
+   the max-width: 768px block) */
+.tab-label-short { display: none; }
+
 /* Tabs */
 .tab-btn {
   padding: 0.8rem 1.6rem;
@@ -1476,6 +1480,75 @@ mark {
   .katex-display {
     overflow-x: auto;
     overflow-y: hidden;
+  }
+
+  /* Color theme pills: scroll instead of clipping/overflowing the header */
+  .color-theme-selector {
+    max-width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .color-theme-selector::-webkit-scrollbar { display: none; }
+  .color-theme-selector button { flex-shrink: 0; }
+
+  /* Draggable tab switcher: swap in the shorter label and tighten padding */
+  .tab-label-full { display: none; }
+  .tab-label-short { display: inline; }
+  .tab-label-item {
+    padding: 10px 0 !important;
+    font-size: 0.85rem !important;
+  }
+
+  /* Library: stack the toolbar and let the search box grow to fill the row */
+  .library-toolbar {
+    flex-wrap: wrap;
+  }
+  .library-toolbar-controls {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .library-search-input {
+    width: 100% !important;
+    flex: 1 1 100%;
+  }
+  .library-mode-toggle {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .library-mode-toggle button {
+    flex: 1;
+  }
+
+  /* Library: stack the folder browser and the PDF preview instead of a
+     side-by-side split, and show only one at a time based on selection. */
+  .library-body {
+    flex-direction: column !important;
+    overflow: visible !important;
+  }
+  .library-left-pane,
+  .library-sidebar {
+    width: 100% !important;
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+  }
+  .library-folder-card {
+    width: 85vw !important;
+    min-width: 260px !important;
+  }
+  .library-preview-pane {
+    min-height: 70vh;
+  }
+  .library-body:not(.has-selection) .library-preview-pane {
+    display: none !important;
+  }
+  .library-body.has-selection .library-left-pane,
+  .library-body.has-selection .library-sidebar {
+    display: none !important;
+  }
+  .library-back-btn {
+    display: inline-flex !important;
   }
 }
 
