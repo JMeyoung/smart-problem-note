@@ -314,12 +314,29 @@ async function buildPdfIndex() {
         }
 
         if (buffer) {
+          const origStdoutWrite = process.stdout.write;
+          const origStderrWrite = process.stderr.write;
+          const origWarn = console.warn;
+
+          const isFontWarning = (str) => {
+            if (!str) return false;
+            const s = String(str);
+            return s.includes('font private use area') || s.includes('Warning:');
+          };
+
           try {
-            // Suppress pdfjs font warning floods during PDF parsing
-            const origWarn = console.warn;
-            console.warn = (...args) => {
-              if (args[0] && typeof args[0] === 'string' && (args[0].includes('font private use area') || args[0].includes('Warning:'))) return;
-              origWarn.apply(console, args);
+            // Override process streams to catch direct C++/JS writes from pdfjs-dist
+            process.stdout.write = function (chunk, ...args) {
+              if (isFontWarning(chunk)) return true;
+              return origStdoutWrite.apply(process.stdout, [chunk, ...args]);
+            };
+            process.stderr.write = function (chunk, ...args) {
+              if (isFontWarning(chunk)) return true;
+              return origStderrWrite.apply(process.stderr, [chunk, ...args]);
+            };
+            console.warn = function (...args) {
+              if (isFontWarning(args[0])) return;
+              return origWarn.apply(console, args);
             };
 
             // 3-second timeout per PDF parse to prevent hanging
@@ -329,7 +346,6 @@ async function buildPdfIndex() {
             );
             
             const data = await Promise.race([parsePromise, timeoutPromise]);
-            console.warn = origWarn; // Restore warn
 
             const pages = (data.text || '').split('\n\n').map((text, i) => ({
               pageNumber: i + 1,
@@ -347,6 +363,10 @@ async function buildPdfIndex() {
             hasChanges = true;
           } catch(e) {
             console.error(`[Index] Error parsing PDF ${file.name}:`, e.message);
+          } finally {
+            process.stdout.write = origStdoutWrite;
+            process.stderr.write = origStderrWrite;
+            console.warn = origWarn;
           }
         }
       } else {
