@@ -66,7 +66,12 @@ function getLocalPdfFiles(dir, relativeDir = '') {
           name: file,
           path: relPath,
           localPath: filePath,
-          modifiedAt: stat.mtime.toISOString()
+          // mtime resets on every Docker rebuild (COPY sets it to build time),
+          // so it can't be used to detect real content changes across deploys.
+          // File size is stable across rebuilds and only changes when the PDF
+          // itself actually changes, so it's what indexing cache-busts on.
+          modifiedAt: stat.mtime.toISOString(),
+          size: stat.size
         });
       }
     }
@@ -297,9 +302,21 @@ async function buildPdfIndex() {
     }
 
     for (const file of allFiles) {
+      // Yield to the event loop between files so requests queued behind a
+      // long re-index (e.g. right after a fresh deploy) still get served
+      // instead of piling up behind a tight synchronous-looking loop.
+      await new Promise(resolve => setImmediate(resolve));
+
       const fileId = file.id;
       const cached = pdfPageIndex[fileId];
-      if (!cached || cached.modifiedAt !== file.modifiedAt) {
+      const isLocal = fileId.startsWith('local__');
+      // Local files: compare by size (stable across container rebuilds).
+      // Drive files: compare by modifiedTime (stable, comes from Drive API).
+      const hasChanged = isLocal
+        ? (!cached || cached.size !== file.size)
+        : (!cached || cached.modifiedAt !== file.modifiedAt);
+
+      if (hasChanged) {
         console.log(`[Index] Parsing: ${file.name}...`);
         
         let buffer = null;
@@ -358,6 +375,7 @@ async function buildPdfIndex() {
               path: file.path,
               localPath: file.localPath,
               modifiedAt: file.modifiedAt,
+              size: file.size,
               pages
             };
             hasChanges = true;
