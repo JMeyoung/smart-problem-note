@@ -453,7 +453,7 @@ export default function Library({ onOpenPdfExternally }) {
       )}
 
       {/* Top Header & View Controls */}
-      <div className="glass-panel flex justify-between items-center" style={{ padding: '0.8rem 1.2rem', gap: '1rem', flexShrink: 0 }}>
+      <div className="glass-panel flex justify-between items-center library-toolbar" style={{ padding: '0.8rem 1.2rem', gap: '1rem', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <h2 style={{ display: 'flex', alignItems: 'center', margin: 0, fontSize: '1.15rem' }}>
             <FolderIcon /> 내 드라이브 파일함
@@ -463,7 +463,7 @@ export default function Library({ onOpenPdfExternally }) {
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+        <div className="library-toolbar-controls" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
           <label 
             style={{
               padding: '0.45rem 0.9rem',
@@ -491,14 +491,14 @@ export default function Library({ onOpenPdfExternally }) {
 
           <input
             type="text"
-            className="input-field"
+            className="input-field library-search-input"
             placeholder="🔍 파일명/본문 검색..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{ width: '220px', padding: '0.45rem 0.75rem', fontSize: '0.85rem', borderRadius: 'var(--radius-md)' }}
           />
 
-          <div style={{ display: 'flex', backgroundColor: 'rgba(0,0,0,0.2)', padding: '3px', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)' }}>
+          <div className="library-mode-toggle" style={{ display: 'flex', backgroundColor: 'rgba(0,0,0,0.2)', padding: '3px', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)' }}>
             <button 
               onClick={() => setLayoutMode('horizontal')}
               title="폴더 가로 나열 뷰"
@@ -552,11 +552,11 @@ export default function Library({ onOpenPdfExternally }) {
       </div>
 
       {/* Main Body Area */}
-      <div style={{ flex: 1, display: 'flex', gap: '1rem', minHeight: 0, overflow: 'hidden' }}>
-        
+      <div className={`library-body${selectedPdf ? ' has-selection' : ''}`} style={{ flex: 1, display: 'flex', gap: '1rem', minHeight: 0, overflow: 'hidden' }}>
+
         {/* Left Explorer or Horizontal Folder Row */}
         {layoutMode === 'horizontal' ? (
-          <div style={{ flex: selectedPdf ? '0 0 420px' : '1', display: 'flex', flexDirection: 'column', gap: '0.75rem', overflow: 'hidden' }}>
+          <div className="library-left-pane" style={{ flex: selectedPdf ? '0 0 420px' : '1', display: 'flex', flexDirection: 'column', gap: '0.75rem', overflow: 'hidden' }}>
             <div 
               style={{ 
                 flex: 1, 
@@ -583,11 +583,11 @@ export default function Library({ onOpenPdfExternally }) {
                 </div>
               ) : (
                 libraryData.map((rootNode, idx) => (
-                  <div 
-                    key={idx} 
-                    className="glass-panel animate-fade-in" 
-                    style={{ 
-                      width: selectedPdf ? '340px' : '360px', 
+                  <div
+                    key={idx}
+                    className="glass-panel animate-fade-in library-folder-card"
+                    style={{
+                      width: selectedPdf ? '340px' : '360px',
                       minWidth: '300px', 
                       display: 'flex', 
                       flexDirection: 'column', 
@@ -617,15 +617,15 @@ export default function Library({ onOpenPdfExternally }) {
             </div>
           </div>
         ) : (
-          <div 
-            className="glass-panel" 
-            style={{ 
-              width: '420px', 
-              minWidth: '360px', 
-              padding: '1rem', 
-              display: 'flex', 
-              flexDirection: 'column', 
-              overflowY: 'auto' 
+          <div
+            className="glass-panel library-sidebar"
+            style={{
+              width: '420px',
+              minWidth: '360px',
+              padding: '1rem',
+              display: 'flex',
+              flexDirection: 'column',
+              overflowY: 'auto'
             }}
           >
             <div className="tree-root">
@@ -649,10 +649,17 @@ export default function Library({ onOpenPdfExternally }) {
         )}
 
         {/* Right PDF Preview Area */}
-        <div className="glass-panel flex-col" style={{ flex: 1, padding: '1.5rem', display: 'flex', flexDirection: 'column', minWidth: 0, height: '100%' }}>
+        <div className="glass-panel flex-col library-preview-pane" style={{ flex: 1, padding: '1.5rem', display: 'flex', flexDirection: 'column', minWidth: 0, height: '100%' }}>
           {selectedPdf ? (
             <div className="flex-col" style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex justify-between items-center mb-4" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
+                <button
+                  onClick={() => setSelectedPdf(null)}
+                  className="btn btn-secondary library-back-btn"
+                  style={{ display: 'none' }}
+                >
+                  ← 목록으로
+                </button>
                 <h3 style={{ margin: 0, wordBreak: 'break-all', fontSize: '1.15rem' }}>📄 {selectedPdf.name}</h3>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <button onClick={handlePrint} disabled={isPrinting} className="btn btn-secondary">

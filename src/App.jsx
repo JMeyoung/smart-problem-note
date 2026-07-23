@@ -242,7 +242,8 @@ const DraggableTabSwitcher = ({ activeTab, setActiveTab }) => {
       </div>
 
       {/* Tab Buttons (labels) */}
-      <div 
+      <div
+        className="tab-label-item"
         onClick={() => !hasDragged && setActiveTab('library')}
         style={{
           flex: 1,
@@ -260,10 +261,13 @@ const DraggableTabSwitcher = ({ activeTab, setActiveTab }) => {
           gap: '8px'
         }}
       >
-        📁 내 드라이브 라이브러리
+        <span>📁</span>
+        <span className="tab-label-full">내 드라이브 라이브러리</span>
+        <span className="tab-label-short">라이브러리</span>
       </div>
-      
-      <div 
+
+      <div
+        className="tab-label-item"
         onClick={() => !hasDragged && setActiveTab('dashboard')}
         style={{
           flex: 1,
@@ -281,7 +285,9 @@ const DraggableTabSwitcher = ({ activeTab, setActiveTab }) => {
           gap: '8px'
         }}
       >
-        📝 오답노트 관리 / 대시보드
+        <span>📝</span>
+        <span className="tab-label-full">오답노트 관리 / 대시보드</span>
+        <span className="tab-label-short">대시보드</span>
       </div>
     </div>
   );
@@ -1193,14 +1199,15 @@ const parseApiResponse = async (response) => {
           </div>
 
           {/* Color Theme Selector Pills */}
-          <div 
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '4px', 
-              background: 'rgba(255,255,255,0.08)', 
-              padding: '3px 6px', 
-              borderRadius: 'var(--radius-pill)', 
+          <div
+            className="color-theme-selector"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              background: 'rgba(255,255,255,0.08)',
+              padding: '3px 6px',
+              borderRadius: 'var(--radius-pill)',
               border: '1px solid var(--glass-border)',
               backdropFilter: 'blur(12px)'
             }}
